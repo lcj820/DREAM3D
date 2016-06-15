@@ -133,6 +133,22 @@ void StatsGenPlotWidget::setPlotTitle(QString title)
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
+void StatsGenPlotWidget::setPhaseName(const QString& phaseName)
+{
+  m_PhaseName->setText(phaseName);
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void StatsGenPlotWidget::setWidgetTitle(const QString &widgetTitle)
+{
+  m_WidgetTitle->setText(widgetTitle);
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
 void StatsGenPlotWidget::setSizeDistributionValues(float mu, float sigma,
                                                    float minCutOff, float maxCutOff,
                                                    float binStepSize)

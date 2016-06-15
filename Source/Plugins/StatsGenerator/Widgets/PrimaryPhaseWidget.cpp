@@ -43,6 +43,8 @@
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QProgressDialog>
 #include <QtWidgets/QLineEdit>
+#include <QtWidgets/QTreeWidget>
+#include <QtWidgets/QTreeWidgetItem>
 #include <QtGui/QIntValidator>
 #include <QtGui/QDoubleValidator>
 
@@ -64,7 +66,11 @@
 #include "StatsGenerator/Widgets/Presets/PrimaryEquiaxedPreset.h"
 #include "StatsGenerator/Widgets/Presets/PrimaryRolledPreset.h"
 #include "StatsGenerator/Widgets/Presets/PrimaryRecrystallizedPreset.h"
-
+#include "StatsGenerator/Widgets/PhaseTreeWidgetItem.h"
+#include "StatsGenerator/Widgets/SGAxisODFWidget.h"
+#include "StatsGenerator/Widgets/StatsGenPlotWidget.h"
+#include "StatsGenerator/Widgets/StatsGenODFWidget.h"
+#include "StatsGenerator/Widgets/StatsGenPlotWidget.h"
 
 
 //-- Qwt Includes AFTER SIMPLib Math due to improper defines in qwt_plot_curve.h
@@ -110,7 +116,14 @@ PrimaryPhaseWidget::PrimaryPhaseWidget(QWidget* parent) :
   m_CutOffMax(NULL),
   m_grid(NULL),
   m_MuValidator(NULL),
-  m_SigmaValidator(NULL)
+  m_SigmaValidator(NULL),
+
+  m_Omega3Plot(NULL),
+  m_BOverAPlot(NULL),
+  m_COverAPlot(NULL),
+  m_NeighborPlot(NULL),
+  m_ODFWidget(NULL),
+  m_AxisODFWidget(NULL)
 {
   setupUi(this);
   setupGui();
@@ -154,8 +167,47 @@ AbstractMicrostructurePresetFactory::Pointer RegisterPresetFactory(QComboBox* mi
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
+void PrimaryPhaseWidget::addTreeWidgetItems(QTreeWidget* treeWidget)
+{
+  QTreeWidgetItem* widgetItem = new QTreeWidgetItem(treeWidget);
+  widgetItem->setText(0, m_PhaseName->text());
+
+  PhaseTreeWidgetItem* sizeDistItem = new PhaseTreeWidgetItem(widgetItem);
+  sizeDistItem->setText(0, "Size Distribution");
+  sizeDistItem->setStatsWidget(this);
+
+  PhaseTreeWidgetItem* omega3DistItem = new PhaseTreeWidgetItem(widgetItem);
+  omega3DistItem->setText(0, "Omega3 Distribution");
+  omega3DistItem->setStatsWidget(m_Omega3Plot);
+
+  PhaseTreeWidgetItem* shapeItemAB = new PhaseTreeWidgetItem(widgetItem);
+  shapeItemAB->setText(0, "Shape Distribution (A/B)");
+  shapeItemAB->setStatsWidget(m_BOverAPlot);
+
+  PhaseTreeWidgetItem* shapeItemCA = new PhaseTreeWidgetItem(widgetItem);
+  shapeItemCA->setText(0, "Shape Distribution (C/A)");
+  shapeItemCA->setStatsWidget(m_COverAPlot);
+
+  PhaseTreeWidgetItem* neighborItem = new PhaseTreeWidgetItem(widgetItem);
+  neighborItem->setText(0, "Neighbor Distribution");
+  neighborItem->setStatsWidget(m_NeighborPlot);
+
+  PhaseTreeWidgetItem* mdfItem = new PhaseTreeWidgetItem(widgetItem);
+  mdfItem->setText(0, "ODF & MDF");
+  mdfItem->setStatsWidget(m_ODFWidget);
+
+  PhaseTreeWidgetItem* axisOdfItem = new PhaseTreeWidgetItem(widgetItem);
+  axisOdfItem->setText(0, "Axis ODF");
+  axisOdfItem->setStatsWidget(m_AxisODFWidget);
+}
+
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
 void PrimaryPhaseWidget::setupGui()
 {
+  setWidgetTitle("Size Distribution");
   distributionTypeCombo->addItem(SIMPL::StringConstants::BetaDistribution.toLatin1().data());
   distributionTypeCombo->addItem(SIMPL::StringConstants::LogNormalDistribution.toLatin1().data());
   distributionTypeCombo->addItem(SIMPL::StringConstants::PowerLawDistribution.toLatin1().data());
@@ -207,8 +259,25 @@ void PrimaryPhaseWidget::setupGui()
   float maxCutOff = 5.0f;
   float binStepSize = 0.5f;
 
-  StatsGenPlotWidget* w = m_Omega3Plot;
 
+  m_SizeDistributionPlot->setCanvasBackground(QColor(Qt::white));
+  m_SizeDistributionPlot->setTitle("Size Distribution");
+
+  m_grid = new QwtPlotGrid;
+  m_grid->enableXMin(true);
+  m_grid->enableYMin(true);
+#if (QWT_VERSION > 0x060000)
+  m_grid->setMajorPen(QPen(Qt::gray, 0, Qt::SolidLine));
+  m_grid->setMinorPen(QPen(Qt::lightGray, 0, Qt::DotLine));
+#else
+  m_grid->setMajPen(QPen(Qt::gray, 0, Qt::SolidLine));
+  m_grid->setMinPen(QPen(Qt::lightGray, 0, Qt::DotLine));
+#endif
+  m_grid->attach(m_SizeDistributionPlot);
+
+  m_Omega3Plot = new StatsGenPlotWidget(nullptr);
+  StatsGenPlotWidget* w = m_Omega3Plot;
+  w->setWidgetTitle("Omega 3 Distribution");
   w->setPlotTitle(QString("Size Vs. Omega 3"));
   w->setXAxisName(QString("Omega 3"));
   w->setYAxisName(QString("Frequency"));
@@ -226,8 +295,9 @@ void PrimaryPhaseWidget::setupGui()
   connect(m_Omega3Plot, SIGNAL(userEditedData()),
           this, SIGNAL(phaseParametersChanged()));
 
-
+  m_BOverAPlot = new StatsGenPlotWidget(nullptr);
   w = m_BOverAPlot;
+  w->setWidgetTitle("B/A Shape Distribution");
   w->setPlotTitle(QString("B/A Shape Distribution"));
   w->setXAxisName(QString("B/A"));
   w->setYAxisName(QString("Frequency"));
@@ -245,7 +315,9 @@ void PrimaryPhaseWidget::setupGui()
   connect(m_BOverAPlot, SIGNAL(userEditedData()),
           this, SIGNAL(phaseParametersChanged()));
 
+  m_COverAPlot = new StatsGenPlotWidget(nullptr);
   w = m_COverAPlot;
+  w->setWidgetTitle(QString("C/A Shape Distribution"));
   w->setPlotTitle(QString("C/A Shape Distribution"));
   w->setXAxisName(QString("C/A"));
   w->setYAxisName(QString("Frequency"));
@@ -263,7 +335,9 @@ void PrimaryPhaseWidget::setupGui()
   connect(m_COverAPlot, SIGNAL(userEditedData()),
           this, SIGNAL(phaseParametersChanged()));
 
+  m_NeighborPlot = new StatsGenPlotWidget(nullptr);
   w = m_NeighborPlot;
+  w->setWidgetTitle(QString("Neighbors Distribution"));
   w->setPlotTitle(QString("Neighbors Distributions"));
   w->setXAxisName(QString("Number of Features (within 1 diameter)"));
   w->setYAxisName(QString("Frequency"));
@@ -281,34 +355,21 @@ void PrimaryPhaseWidget::setupGui()
   connect(m_NeighborPlot, SIGNAL(userEditedData()),
           this, SIGNAL(phaseParametersChanged()));
 
-  m_SizeDistributionPlot->setCanvasBackground(QColor(Qt::white));
-  m_SizeDistributionPlot->setTitle("Size Distribution");
-
-  m_grid = new QwtPlotGrid;
-  m_grid->enableXMin(true);
-  m_grid->enableYMin(true);
-#if (QWT_VERSION > 0x060000)
-  m_grid->setMajorPen(QPen(Qt::gray, 0, Qt::SolidLine));
-  m_grid->setMinorPen(QPen(Qt::lightGray, 0, Qt::DotLine));
-#else
-  m_grid->setMajPen(QPen(Qt::gray, 0, Qt::SolidLine));
-  m_grid->setMinPen(QPen(Qt::lightGray, 0, Qt::DotLine));
-#endif
-  m_grid->attach(m_SizeDistributionPlot);
-
   // For the ODF Tab we want the MDF functionality
+  m_ODFWidget = new StatsGenODFWidget(nullptr);
+  m_ODFWidget->setWidgetTitle("ODF & MDF Settings");
   m_ODFWidget->enableMDFTab(true);
-
   // Remove any Axis Decorations. The plots are explicitly know to have a -1 to 1 axis min/max
   m_ODFWidget->setEnableAxisDecorations(false);
-
-  // Remove any Axis Decorations. The plots are explicitly know to have a -1 to 1 axis min/max
-  m_AxisODFWidget->setEnableAxisDecorations(false);
-
   connect(m_ODFWidget, SIGNAL(odfParametersChanged()),
           this, SIGNAL(phaseParametersChanged()));
   connect(m_ODFWidget, SIGNAL(bulkLoadEvent(bool)),
           this, SLOT(bulkLoadEvent(bool)));
+
+  m_AxisODFWidget = new SGAxisODFWidget(nullptr);
+  m_AxisODFWidget->setWidgetTitle("Axis ODF Settings");
+  // Remove any Axis Decorations. The plots are explicitly know to have a -1 to 1 axis min/max
+  m_AxisODFWidget->setEnableAxisDecorations(false);
   connect(m_AxisODFWidget, SIGNAL(axisODFParametersChanged()),
           this, SIGNAL(phaseParametersChanged()));
 
@@ -336,6 +397,28 @@ void PrimaryPhaseWidget::setPhaseIndex(int index)
 int PrimaryPhaseWidget::getPhaseIndex() const
 {
   return m_PhaseIndex;
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void PrimaryPhaseWidget::setPhaseName(const QString& phaseName)
+{
+  m_PhaseName->setText(phaseName);
+  m_Omega3Plot->setPhaseName(phaseName);
+  m_BOverAPlot->setPhaseName(phaseName);
+  m_COverAPlot->setPhaseName(phaseName);
+  m_NeighborPlot->setPhaseName(phaseName);
+  m_ODFWidget->setPhaseName(phaseName);
+  m_AxisODFWidget->setPhaseName(phaseName);
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void PrimaryPhaseWidget::setWidgetTitle(const QString &widgetTitle)
+{
+  m_WidgetTitle->setText(widgetTitle);
 }
 
 // -----------------------------------------------------------------------------
@@ -421,11 +504,7 @@ int PrimaryPhaseWidget::gatherSizeDistributionFromGui(float& mu, float& sigma, f
 // -----------------------------------------------------------------------------
 void PrimaryPhaseWidget::setTabsPlotTabsEnabled(bool b)
 {
-  qint32 count = this->tabWidget->count();
-  for (qint32 i = 1; i < count; ++i)
-  {
-    this->tabWidget->setTabEnabled(i, b);
-  }
+
 }
 
 // -----------------------------------------------------------------------------
@@ -434,7 +513,6 @@ void PrimaryPhaseWidget::setTabsPlotTabsEnabled(bool b)
 void PrimaryPhaseWidget::dataWasEdited()
 {
   setTabsPlotTabsEnabled(true);
-  this->tabWidget->setTabEnabled(0, false);
 }
 
 // -----------------------------------------------------------------------------

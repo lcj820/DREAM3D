@@ -55,6 +55,8 @@
 #include "StatsGenerator/Widgets/MatrixPhaseWidget.h"
 #include "StatsGenerator/Widgets/BoundaryPhaseWidget.h"
 #include "StatsGenerator/Widgets/TransformationPhaseWidget.h"
+#include "StatsGenerator/Widgets/PhaseTreeWidgetItem.h"
+
 
 #include <ui_StatsGeneratorWidget.h>
 
@@ -79,6 +81,8 @@ class StatsGeneratorWidget : public FilterParameterWidget, private Ui::StatsGene
     void adjustWindowTitle();
     void displayDialogBox(QString title, QString text, QMessageBox::Icon icon);
 
+    void insertTreeViewPhase(QString name);
+
   protected slots:
 
     void beforePreflight();
@@ -95,6 +99,9 @@ class StatsGeneratorWidget : public FilterParameterWidget, private Ui::StatsGene
     void on_saveJsonBtn_clicked();
     void on_openStatsFile_clicked();
     void on_phaseTabs_tabCloseRequested ( int index );
+
+    /* Misc Slots */
+    void on_m_PhaseTreeWidget_itemClicked(QTreeWidgetItem *item, int column);
 
   signals:
     void errorSettingFilterParameter(const QString& msg);
@@ -129,6 +136,7 @@ class StatsGeneratorWidget : public FilterParameterWidget, private Ui::StatsGene
   private:
     StatsGeneratorFilterParameter* m_FilterParameter;
     StatsGeneratorFilter*          m_Filter;
+    QTabWidget*                    phaseTabs;
 
     QString m_OpenDialogLastDirectory; // Must be last in the list
     StatsGeneratorWidget(const StatsGeneratorWidget&); // Copy Constructor Not Implemented

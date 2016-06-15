@@ -77,6 +77,10 @@ class SGAxisODFWidget : public QWidget, private Ui::SGAxisODFWidget
     void setPhaseIndex(int value);
     int getPhaseIndex();
 
+    void setPhaseName(const QString &phaseName);
+    void setWidgetTitle(const QString &widgetTitle);
+
+
     unsigned int getCrystalStructure();
 
     int getOrientationData(StatsData* statsData, unsigned int phaseType, bool preflight = false);

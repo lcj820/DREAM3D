@@ -38,11 +38,13 @@ set(${PLUGIN_NAME}_Widgets_HDRS
   ${${PLUGIN_NAME}_Widgets_HDRS}
   ${${PLUGIN_NAME}_SOURCE_DIR}/Widgets/SGWidget.h
   ${${PLUGIN_NAME}_SOURCE_DIR}/Widgets/StatsGenODFWidget.h
+  ${StatsGenerator_SOURCE_DIR}/Widgets/PhaseTreeWidgetItem.h
 )
 set(${PLUGIN_NAME}_Widgets_SRCS
   ${${PLUGIN_NAME}_Widgets_SRCS}
   ${${PLUGIN_NAME}_SOURCE_DIR}/Widgets/SGWidget.cpp
   ${${PLUGIN_NAME}_SOURCE_DIR}/Widgets/StatsGenODFWidget.cpp
+  ${StatsGenerator_SOURCE_DIR}/Widgets/PhaseTreeWidgetItem.cpp
 )
 
 set(StatsGenerator_DELEGATE_SRCS

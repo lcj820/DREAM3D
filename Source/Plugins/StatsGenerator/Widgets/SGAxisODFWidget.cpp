@@ -222,6 +222,22 @@ int SGAxisODFWidget::getPhaseIndex()
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
+void SGAxisODFWidget::setPhaseName(const QString& phaseName)
+{
+  m_PhaseName->setText(phaseName);
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void SGAxisODFWidget::setWidgetTitle(const QString &widgetTitle)
+{
+  m_WidgetTitle->setText(widgetTitle);
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
 void SGAxisODFWidget::setPlotTabTitles(QString t1, QString t2, QString t3)
 {
   tabWidget->setTabText(1, t1);

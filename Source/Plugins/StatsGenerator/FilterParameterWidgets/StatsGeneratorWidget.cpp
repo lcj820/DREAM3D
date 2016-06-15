@@ -110,6 +110,8 @@ StatsGeneratorWidget::~StatsGeneratorWidget()
 // -----------------------------------------------------------------------------
 void StatsGeneratorWidget::setupGui()
 {
+  phaseTabs = new QTabWidget(nullptr);
+
   // Hide the debugging buttons
   updatePipelineBtn->hide();
   saveH5Btn->hide();
@@ -133,16 +135,26 @@ void StatsGeneratorWidget::setupGui()
   StatsDataArray::Pointer sda = m_Filter->getStatsDataArray();
   if( (sda && sda->getNumberOfTuples() == 0) || !sda)
   {
-    PrimaryPhaseWidget* ppw = new PrimaryPhaseWidget;
+    PrimaryPhaseWidget* ppw = new PrimaryPhaseWidget(nullptr);
     ppw->setPhaseIndex(1);
     ppw->setPhaseType(SIMPL::PhaseType::PrimaryPhase);
     ppw->setCrystalStructure(Ebsd::CrystalStructure::Cubic_High);
     ppw->setPhaseFraction(1.0);
     ppw->setTotalPhaseFraction(1.0);
-    phaseTabs->addTab(ppw, "Primary Phase");
+ //   phaseTabs->addTab(ppw, "Primary Phase");
 
     connect(ppw, SIGNAL(phaseParametersChanged()),
             this, SIGNAL(parametersChanged()));
+
+    ppw->addTreeWidgetItems(m_PhaseTreeWidget);
+    ppw->setPhaseName("Primary Phase-1");
+
+    QLayoutItem* layoutItem = contentFrameLayout->takeAt(0);
+    if(layoutItem)
+    {
+      layoutItem->widget()->setParent(nullptr);
+    }
+    contentFrameLayout->addWidget(ppw);
   }
   else
   {
@@ -226,6 +238,29 @@ void StatsGeneratorWidget::on_updatePipelineBtn_clicked()
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
+void StatsGeneratorWidget::on_m_PhaseTreeWidget_itemClicked(QTreeWidgetItem *item, int column)
+{
+  PhaseTreeWidgetItem* ptwi = dynamic_cast<PhaseTreeWidgetItem*>(item);
+  if(ptwi)
+  {
+    // remove the current widget
+//    if(m_Splitter->count() > 1) {
+//      m_Splitter->widget(1)->setParent(nullptr);
+//    }
+
+    QLayoutItem* layoutItem = contentFrameLayout->takeAt(0);
+    if(layoutItem)
+    {
+      layoutItem->widget()->setParent(nullptr);
+    }
+    QWidget* w = ptwi->getStatsWidget();
+    contentFrameLayout->addWidget(w);
+  }
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
 void StatsGeneratorWidget::filterNeedsInputParameters(AbstractFilter* filter)
 {
   StatsGeneratorFilter* statsGenFilter = dynamic_cast<StatsGeneratorFilter*>(filter);
@@ -295,7 +330,7 @@ void StatsGeneratorWidget::on_addPhase_clicked()
 {
   // Ensure the Current SGWidget has generated its data first:
   SGWidget* sgwidget = qobject_cast<SGWidget*>(phaseTabs->currentWidget());
-  if (false == sgwidget->getDataHasBeenGenerated())
+  if (sgwidget && false == sgwidget->getDataHasBeenGenerated())
   {
     int r = QMessageBox::warning(this, tr("StatsGenerator"),
                                  tr("Data for the current phase has NOT been generated.\nDo you want to generate it now?"),
@@ -318,6 +353,8 @@ void StatsGeneratorWidget::on_addPhase_clicked()
     SGWidget* sgwidget = qobject_cast<SGWidget*>(phaseTabs->widget(p));
     phaseFractionTotal += sgwidget->getPhaseFraction();
   }
+  QString phaseName;
+  QTextStream out(&phaseName);
 
   EditPhaseDialog dialog;
   dialog.setEditFlag(true);
@@ -328,7 +365,7 @@ void StatsGeneratorWidget::on_addPhase_clicked()
     if(dialog.getPhaseType() == SIMPL::PhaseType::PrimaryPhase)
     {
       PrimaryPhaseWidget* ppw = new PrimaryPhaseWidget();
-      phaseTabs->addTab(ppw, "Primary");
+      //phaseTabs->addTab(ppw, "Primary");
 
       connect(ppw, SIGNAL(phaseParametersChanged()),
               this, SIGNAL(parametersChanged()));
@@ -342,6 +379,15 @@ void StatsGeneratorWidget::on_addPhase_clicked()
       ppw->setObjectName(cName);
       ppw->updatePlots();
       setWindowModified(true);
+      out << "Primary Phase" << "-" << phaseTabs->count();
+      ppw->addTreeWidgetItems(m_PhaseTreeWidget);
+      ppw->setPhaseName(phaseName);
+      QLayoutItem* layoutItem = contentFrameLayout->takeAt(0);
+      if(layoutItem)
+      {
+        layoutItem->widget()->setParent(nullptr);
+      }
+      contentFrameLayout->addWidget(ppw);
     }
     else if(dialog.getPhaseType() == SIMPL::PhaseType::PrecipitatePhase)
     {
@@ -361,6 +407,8 @@ void StatsGeneratorWidget::on_addPhase_clicked()
       ppw->setObjectName(cName);
       ppw->updatePlots();
       setWindowModified(true);
+      out << "Precipitate Phase" << "-" << phaseTabs->count();
+
     }
     else if(dialog.getPhaseType() == SIMPL::PhaseType::TransformationPhase)
     {
@@ -380,6 +428,8 @@ void StatsGeneratorWidget::on_addPhase_clicked()
       tpw->setObjectName(cName);
       tpw->updatePlots();
       setWindowModified(true);
+      out << "Transformation Phase" << "-" << phaseTabs->count();
+
     }
     else if(dialog.getPhaseType() == SIMPL::PhaseType::MatrixPhase)
     {
@@ -397,6 +447,8 @@ void StatsGeneratorWidget::on_addPhase_clicked()
       QString cName = mpw->getComboString();
       mpw->setObjectName(cName);
       setWindowModified(true);
+      out << "Matrix Phase" << "-" << phaseTabs->count();
+
     }
     else if(dialog.getPhaseType() == SIMPL::PhaseType::BoundaryPhase)
     {
@@ -414,12 +466,43 @@ void StatsGeneratorWidget::on_addPhase_clicked()
       QString cName = bpw->getComboString();
       bpw->setObjectName(cName);
       setWindowModified(true);
+      out << "Boundary Phase" << "-" << phaseTabs->count();
+
     }
 
+    //insertTreeViewPhase(phaseName);
     // Make sure the new tab is the active tab
     phaseTabs->setCurrentIndex(phaseTabs->count() - 1);
   }
   emit parametersChanged();
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void StatsGeneratorWidget::insertTreeViewPhase(QString phaseName)
+{
+
+  QTreeWidgetItem* widgetItem = new QTreeWidgetItem(m_PhaseTreeWidget);
+  widgetItem->setText(0, phaseName);
+
+  QTreeWidgetItem* sizeDistItem = new QTreeWidgetItem(widgetItem);
+  sizeDistItem->setText(0, "Size Distribution");
+
+  QTreeWidgetItem* omega3DistItem = new QTreeWidgetItem(widgetItem);
+  omega3DistItem->setText(0, "Omega3 Distribution");
+
+  QTreeWidgetItem* shapeItem = new QTreeWidgetItem(widgetItem);
+  shapeItem->setText(0, "Shape Distribution");
+
+  QTreeWidgetItem* neighborItem = new QTreeWidgetItem(widgetItem);
+  neighborItem->setText(0, "Neighbor Distribution");
+
+  QTreeWidgetItem* mdfItem = new QTreeWidgetItem(widgetItem);
+  mdfItem->setText(0, "ODF & MDF");
+
+  QTreeWidgetItem* axisOdfItem = new QTreeWidgetItem(widgetItem);
+  axisOdfItem->setText(0, "Axis ODF");
 }
 
 // -----------------------------------------------------------------------------

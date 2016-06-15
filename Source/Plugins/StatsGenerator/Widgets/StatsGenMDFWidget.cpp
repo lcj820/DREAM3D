@@ -121,6 +121,22 @@ SGMDFTableModel* StatsGenMDFWidget::tableModel()
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
+void StatsGenMDFWidget::setPhaseName(const QString& phaseName)
+{
+  m_PhaseName->setText(phaseName);
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void StatsGenMDFWidget::setWidgetTitle(const QString &widgetTitle)
+{
+  m_WidgetTitle->setText(widgetTitle);
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
 void StatsGenMDFWidget::setupGui()
 {
   initQwtPlot("Misorientation Angle(w)", "Freq", m_MDFPlot);

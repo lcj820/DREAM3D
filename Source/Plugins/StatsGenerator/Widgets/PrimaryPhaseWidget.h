@@ -29,6 +29,10 @@ class QwtPlotGrid;
 class QwtPlotCurve;
 class QwtPlotMarker;
 class QDoubleValidator;
+class QTreeWidget;
+class StatsGenPlotWidget;
+class StatsGenODFWidget;
+class SGAxisODFWidget;
 
 
 /*
@@ -36,7 +40,6 @@ class QDoubleValidator;
  x^{\left( \mu - max*\sigma \right) }
 
  */
-
 
 class PrimaryPhaseWidget : public SGWidget, private Ui::PrimaryPhaseWidget
 {
@@ -57,6 +60,9 @@ class PrimaryPhaseWidget : public SGWidget, private Ui::PrimaryPhaseWidget
     SIMPL_INSTANCE_PROPERTY(float, TotalPhaseFraction)
     SIMPL_INSTANCE_PROPERTY(bool, DataHasBeenGenerated)
     SIMPL_INSTANCE_PROPERTY(bool, BulkLoadFailure)
+
+    void setPhaseName(const QString &phaseName);
+    void setWidgetTitle(const QString &widgetTitle);
 
     void extractStatsData(AttributeMatrix::Pointer attrMat, int index);
 
@@ -80,6 +86,8 @@ class PrimaryPhaseWidget : public SGWidget, private Ui::PrimaryPhaseWidget
     int gatherSizeDistributionFromGui(float& mu, float& sigma, float& minCutOff, float& maxCutOff, float& stepSize);
 
     int gatherStatsData(AttributeMatrix::Pointer attrMat, bool preflight = false);
+
+    void addTreeWidgetItems(QTreeWidget* treeWidget);
 
   public slots:
 
@@ -139,6 +147,13 @@ class PrimaryPhaseWidget : public SGWidget, private Ui::PrimaryPhaseWidget
 
     QDoubleValidator* m_MuValidator;
     QDoubleValidator* m_SigmaValidator;
+
+    StatsGenPlotWidget* m_Omega3Plot;
+    StatsGenPlotWidget* m_BOverAPlot;
+    StatsGenPlotWidget* m_COverAPlot;
+    StatsGenPlotWidget* m_NeighborPlot;
+    StatsGenODFWidget* m_ODFWidget;
+    SGAxisODFWidget* m_AxisODFWidget;
 
     PrimaryPhaseWidget(const PrimaryPhaseWidget&); // Copy Constructor Not Implemented
     void operator=(const PrimaryPhaseWidget&); // Operator '=' Not Implemented

@@ -81,6 +81,9 @@ class StatsGenPlotWidget : public QWidget, private Ui::StatsGenPlotWidget
     uint32_t getDistributionType() { return m_DistributionType; }
     void blockDistributionTypeChanges(bool block);
 
+    void setPhaseName(const QString &phaseName);
+    void setWidgetTitle(const QString &widgetTitle);
+
     void setXAxisName(QString name);
     void setYAxisName(QString name);
 

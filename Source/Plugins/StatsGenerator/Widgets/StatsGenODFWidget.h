@@ -90,6 +90,9 @@ class StatsGenODFWidget : public QWidget, private Ui::SGAxisODFWidget
     void setPhaseIndex(int value);
     int getPhaseIndex();
 
+    void setPhaseName(const QString &phaseName);
+    void setWidgetTitle(const QString &widgetTitle);
+
     void setCrystalStructure(unsigned int value);
     unsigned int getCrystalStructure();
 

@@ -287,6 +287,22 @@ int StatsGenODFWidget::getPhaseIndex()
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
+void StatsGenODFWidget::setPhaseName(const QString& phaseName)
+{
+  m_PhaseName->setText(phaseName);
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void StatsGenODFWidget::setWidgetTitle(const QString &widgetTitle)
+{
+  m_WidgetTitle->setText(widgetTitle);
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
 void StatsGenODFWidget::setupGui()
 {
   // Setup the TableView and Table Models

@@ -104,6 +104,23 @@ SGRDFTableModel* StatsGenRDFWidget::tableModel()
   return m_RDFTableModel;
 }
 
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void StatsGenRDFWidget::setPhaseName(const QString& phaseName)
+{
+  m_PhaseName->setText(phaseName);
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void StatsGenRDFWidget::setWidgetTitle(const QString &widgetTitle)
+{
+  m_WidgetTitle->setText(widgetTitle);
+}
+
 #if 0
 // -----------------------------------------------------------------------------
 //
