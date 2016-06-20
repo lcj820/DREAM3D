@@ -66,7 +66,8 @@
 #include <qwt_interval.h>
 #include <qwt_point_3d.h>
 #include <qwt_compat.h>
-
+#include <qwt_plot_layout.h>
+#include <qwt_scale_widget.h>
 
 #include "EbsdLib/EbsdConstants.h"
 
@@ -155,6 +156,27 @@ void StatsGenMDFWidget::initQwtPlot(QString xAxisName, QString yAxisName, QwtPlo
 {
   plot->setAxisTitle(QwtPlot::xBottom, xAxisName);
   plot->setAxisTitle(QwtPlot::yLeft, yAxisName);
+  plot->setPalette( Qt::black );
+  plot->setCanvasBackground( Qt::black ); //Set the Background colour
+
+  // we want to have the axis scales like a frame around the
+  // canvas
+  plot->plotLayout()->setAlignCanvasToScales( true );
+  for ( int axis = 0; axis < QwtPlot::axisCnt; axis++ )
+  {
+      plot->axisWidget( axis )->setMargin( 0 );
+  }
+  QwtPlotCanvas *canvas = new QwtPlotCanvas();
+
+  canvas->setAutoFillBackground( false );
+  canvas->setFrameStyle( QFrame::NoFrame );
+  canvas->setBackgroundRole(QPalette::Background);
+  QPalette pal = canvas->palette();
+  pal.setBrush( QPalette::Window, Qt::black );
+
+  canvas->setPalette( pal );
+  plot->setCanvas( canvas );
+
 }
 
 // -----------------------------------------------------------------------------
@@ -256,7 +278,13 @@ void StatsGenMDFWidget::updateMDFPlot(QVector<float>& odf)
 #else
   curve->setData(xD, yD);
 #endif
+  QColor color = QColor("DodgerBlue");
+  curve->setPen(color, 2);
+  curve->setRenderHint( QwtPlotItem::RenderAntialiased, true );
   curve->setStyle(QwtPlotCurve::Lines);
+  QwtSymbol *symbol = new QwtSymbol( QwtSymbol::Ellipse,
+      QBrush( Qt::white ), QPen( color, 2 ), QSize( 8, 8 ) );
+  curve->setSymbol( symbol );
   curve->attach(m_MDFPlot);
   m_MDFPlot->replot();
 }
