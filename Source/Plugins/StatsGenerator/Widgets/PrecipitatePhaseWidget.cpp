@@ -952,3 +952,13 @@ QString PrecipitatePhaseWidget::getTabTitle()
   return QString("Precipitate");
 }
 
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+QIcon PrecipitatePhaseWidget::getPhaseIcon()
+{
+  QIcon icon;
+  icon.addFile(QStringLiteral(":/StatsGenerator/icons/Precipitate.png"), QSize(), QIcon::Normal, QIcon::Off);
+  icon.addFile(QStringLiteral(":/StatsGenerator/icons/Precipitate_Selected.png"), QSize(), QIcon::Normal, QIcon::On);
+  return icon;
+}

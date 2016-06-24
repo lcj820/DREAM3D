@@ -115,10 +115,11 @@ class StatsGenODFWidget : public QWidget, private Ui::SGAxisODFWidget
     void on_deleteODFTextureBtn_clicked();
     void on_loadODFTextureBtn_clicked();
     void on_selectAnglesFile_clicked();
-    void on_bulkLoadGroupBox_clicked ( bool checked = false );
-    void on_weightSpreadGroupBox_clicked ( bool checked = false );
     void on_savePoleFigureImage_clicked();
     void on_angleFilePath_textChanged();
+
+    void on_m_WeightSpreads_clicked(bool b);
+    void on_m_WeightSpreadsBulkLoad_clicked(bool b);
 
   signals:
     void odfParametersChanged();
@@ -131,7 +132,6 @@ class StatsGenODFWidget : public QWidget, private Ui::SGAxisODFWidget
     unsigned int      m_CrystalStructure;
     SGODFTableModel*        m_ODFTableModel;
     SGODFTableModel*        m_OdfBulkTableModel;
-    StatsGenMDFWidget*      m_MDFWidget;
     QVector<QwtPlotCurve*>  m_PlotCurves;
     QwtPlotMarker*          m_PlotGrid;
     QwtPlotCurve*           m_CircleGrid;

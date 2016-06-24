@@ -41,6 +41,7 @@
 #define WIN32_LEAN_AND_MEAN   // Exclude rarely-used stuff from Windows headers
 #endif
 
+#include <iostream>
 
 #include "SIMPLib/SIMPLib.h"
 #include "SIMPLib/Math/SIMPLibMath.h"
@@ -434,6 +435,14 @@ class StatsGen
       float w;
 
       CubicOps ops;
+//      std::vector<size_t> indices;
+//      for (int j = 0; j < CubicOps::k_MdfSize; j++)
+//      {
+//        if(mdf[j] > 0.0f)
+//        {
+//          indices.push_back(j);
+//        }
+//      }
 
       for (int i = 0; i < npoints; i++)
       {
@@ -448,7 +457,9 @@ class StatsGen
         choose = 0;
         totaldensity = 0;
         for (int j = 0; j < CubicOps::k_MdfSize; j++)
+       // for(size_t j = 0; j < indices.size(); j++)
         {
+
           density = mdf[j];
           td1 = totaldensity;
           totaldensity = totaldensity + density;
@@ -470,6 +481,7 @@ class StatsGen
         xval[i] = i * 5.0 + 2.5;
         yval[i] = yval[i] / float(size);
       }
+
       return err;
     }
 

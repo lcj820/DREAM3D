@@ -105,6 +105,9 @@ class PrecipitatePhaseWidget : public SGWidget, private Ui::PrecipitatePhaseWidg
 
     int gatherStatsData(AttributeMatrix::Pointer attrMat, bool preflight = false);
 
+    virtual QIcon getPhaseIcon();
+
+
   public slots:
     void on_m_GenerateDefaultData_clicked();
 

@@ -75,6 +75,7 @@ class BoundaryPhaseWidget : public SGWidget, private Ui::BoundaryPhaseWidget
     QString getTabTitle();
 
     int gatherStatsData(AttributeMatrix::Pointer attrMat, bool preflight = false);
+    virtual QIcon getPhaseIcon();
 
   protected slots:
     void dataWasEdited();

@@ -215,3 +215,13 @@ QString BoundaryPhaseWidget::getTabTitle()
   return QString("Boundary");
 }
 
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+QIcon BoundaryPhaseWidget::getPhaseIcon()
+{
+  QIcon icon;
+  icon.addFile(QStringLiteral(":/StatsGenerator/icons/Boundary.png"), QSize(), QIcon::Normal, QIcon::Off);
+  icon.addFile(QStringLiteral(":/StatsGenerator/icons/Boundary_Selected.png"), QSize(), QIcon::Normal, QIcon::On);
+  return icon;
+}

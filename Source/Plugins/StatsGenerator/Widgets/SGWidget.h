@@ -37,7 +37,7 @@
 #define _sgwidget_h_
 
 #include <QtWidgets/QWidget>
-
+#include <QtGui/QIcon>
 
 #include "SIMPLib/Common/Constants.h"
 #include "SIMPLib/DataContainers/AttributeMatrix.h"
@@ -69,6 +69,8 @@ class SGWidget : public QWidget
     SIMPL_VIRTUAL_INSTANCE_PROPERTY(float, TotalPhaseFraction)
     SIMPL_VIRTUAL_INSTANCE_PROPERTY(bool, DataHasBeenGenerated)
     SIMPL_VIRTUAL_INSTANCE_PROPERTY(bool, BulkLoadFailure)
+
+    virtual QIcon getPhaseIcon();
 
     virtual void extractStatsData(AttributeMatrix::Pointer attrMat, int index);
     virtual int gatherStatsData(AttributeMatrix::Pointer attrMat, bool preflight = false);

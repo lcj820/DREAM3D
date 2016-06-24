@@ -101,6 +101,9 @@ class SGAxisODFWidget : public QWidget, private Ui::SGAxisODFWidget
     void on_loadODFTextureBtn_clicked();
     void on_savePoleFigureImage_clicked();
 
+    virtual void on_m_WeightSpreads_clicked(bool b);
+    virtual void on_m_WeightSpreadsBulkLoad_clicked(bool b);
+
   signals:
     void axisODFParametersChanged();
 

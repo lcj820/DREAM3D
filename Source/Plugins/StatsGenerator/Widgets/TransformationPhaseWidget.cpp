@@ -951,3 +951,14 @@ QString TransformationPhaseWidget::getTabTitle()
   return QString("Transformation");
 }
 
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+QIcon TransformationPhaseWidget::getPhaseIcon()
+{
+  QIcon icon;
+  icon.addFile(QStringLiteral(":/StatsGenerator/icons/Transformation.png"), QSize(), QIcon::Normal, QIcon::Off);
+  icon.addFile(QStringLiteral(":/StatsGenerator/icons/Transformation_Selected.png"), QSize(), QIcon::Normal, QIcon::On);
+  return icon;
+}

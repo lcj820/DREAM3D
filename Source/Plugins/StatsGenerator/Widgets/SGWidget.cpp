@@ -103,4 +103,10 @@ QString SGWidget::getTabTitle()
   return QString("Unknown Phase Type");
 }
 
-
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+QIcon SGWidget::getPhaseIcon()
+{
+  return QIcon();
+}

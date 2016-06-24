@@ -224,7 +224,7 @@ int SGAxisODFWidget::getPhaseIndex()
 // -----------------------------------------------------------------------------
 void SGAxisODFWidget::setPhaseName(const QString& phaseName)
 {
-  m_PhaseName->setText(phaseName);
+  //m_PhaseName->setText(phaseName);
 }
 
 // -----------------------------------------------------------------------------
@@ -232,17 +232,23 @@ void SGAxisODFWidget::setPhaseName(const QString& phaseName)
 // -----------------------------------------------------------------------------
 void SGAxisODFWidget::setWidgetTitle(const QString &widgetTitle)
 {
-  m_WidgetTitle->setText(widgetTitle);
+  //m_WidgetTitle->setText(widgetTitle);
 }
 
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
-void SGAxisODFWidget::setPlotTabTitles(QString t1, QString t2, QString t3)
+void SGAxisODFWidget::on_m_WeightSpreads_clicked(bool b)
 {
-  tabWidget->setTabText(1, t1);
-  tabWidget->setTabText(2, t2);
-  tabWidget->setTabText(3, t3);
+  m_WeightSpreadsStackedWidget->setCurrentIndex(0);
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void SGAxisODFWidget::on_m_WeightSpreadsBulkLoad_clicked(bool b)
+{
+  m_WeightSpreadsStackedWidget->setCurrentIndex(1);
 }
 
 // -----------------------------------------------------------------------------
@@ -250,8 +256,13 @@ void SGAxisODFWidget::setPlotTabTitles(QString t1, QString t2, QString t3)
 // -----------------------------------------------------------------------------
 void SGAxisODFWidget::setupGui()
 {
-  setPlotTabTitles("A-Axis PF", "B-Axis PF", "C-Axis PF");
+  //setPlotTabTitles("A-Axis PF", "B-Axis PF", "C-Axis PF");
 
+//  tabWidget->setTabText(1, t1);
+//  tabWidget->setTabText(2, t2);
+//  tabWidget->setTabText(3, t3);
+
+  m_OdfGroupBox->setTitle("Axis ODF");
   // Setup the TableView and Table Models
   QHeaderView* headerView = new QHeaderView(Qt::Horizontal, m_ODFTableView);
   headerView->sectionResizeMode(QHeaderView::Interactive);
@@ -279,7 +290,6 @@ void SGAxisODFWidget::setupGui()
     pfLambertLabel->hide();
   }
 
-  bulkLoadGroupBox->hide();
 }
 
 // -----------------------------------------------------------------------------

@@ -41,6 +41,7 @@
 
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/QMessageBox>
+#include <QtWidgets/QProgressDialog>
 
 #include "SIMPLib/Common/SIMPLibSetGetMacros.h"
 #include "SIMPLib/FilterParameters/FilterParameter.h"
@@ -62,6 +63,7 @@
 
 class StatsGeneratorFilter;
 class StatsGeneratorFilterParameter;
+class QProgressDialog;
 
 /**
  * @class StatsGeneratorWidget StatsGeneratorWidget.h StatsGenerator/StatsGeneratorWidget.h
@@ -81,8 +83,6 @@ class StatsGeneratorWidget : public FilterParameterWidget, private Ui::StatsGene
     void adjustWindowTitle();
     void displayDialogBox(QString title, QString text, QMessageBox::Icon icon);
 
-    void insertTreeViewPhase(QString name);
-
   protected slots:
 
     void beforePreflight();
@@ -98,10 +98,9 @@ class StatsGeneratorWidget : public FilterParameterWidget, private Ui::StatsGene
     void on_editPhase_clicked();
     void on_saveJsonBtn_clicked();
     void on_openStatsFile_clicked();
-    void on_phaseTabs_tabCloseRequested ( int index );
 
     /* Misc Slots */
-    void on_m_PhaseTreeWidget_itemClicked(QTreeWidgetItem *item, int column);
+    //void on_m_PhaseTreeWidget_itemClicked(QTreeWidgetItem *item, int column);
 
   signals:
     void errorSettingFilterParameter(const QString& msg);
@@ -133,10 +132,14 @@ class StatsGeneratorWidget : public FilterParameterWidget, private Ui::StatsGene
      */
     DataContainerArray::Pointer generateDataContainerArray();
 
+    QPushButton* createPhaseButton(const QString& label, const QString &icon);
+
+
+    void addNewPhase(QProgressDialog& progress, uint32_t* phaseTypes, int phase, AttributeMatrix::Pointer cellEnsembleAttrMat);
+
   private:
     StatsGeneratorFilterParameter* m_FilterParameter;
     StatsGeneratorFilter*          m_Filter;
-    QTabWidget*                    phaseTabs;
 
     QString m_OpenDialogLastDirectory; // Must be last in the list
     StatsGeneratorWidget(const StatsGeneratorWidget&); // Copy Constructor Not Implemented

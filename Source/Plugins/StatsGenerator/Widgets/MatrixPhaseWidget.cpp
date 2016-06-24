@@ -223,3 +223,13 @@ QString MatrixPhaseWidget::getTabTitle()
   return QString("Matrix");
 }
 
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+QIcon MatrixPhaseWidget::getPhaseIcon()
+{
+  QIcon icon;
+  icon.addFile(QStringLiteral(":/StatsGenerator/icons/Matrix.png"), QSize(), QIcon::Normal, QIcon::Off);
+  icon.addFile(QStringLiteral(":/StatsGenerator/icons/Matrix_Selected.png"), QSize(), QIcon::Normal, QIcon::On);
+  return icon;
+}

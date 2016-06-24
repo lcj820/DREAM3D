@@ -46,7 +46,7 @@
 #include "SIMPLib/Common/Constants.h"
 #include "SIMPLib/StatsData/StatsData.h"
 
-
+class QTableView;
 class SGAbstractTableModel;
 class QwtPlotZoomer;
 class QwtPlotPicker;
@@ -68,8 +68,6 @@ class StatsGenPlotWidget : public QWidget, private Ui::StatsGenPlotWidget
     StatsGenPlotWidget(QWidget* parent = 0);
     virtual ~StatsGenPlotWidget();
 
-    void setPlotTitle(QString title);
-
     VectorOfFloatArray getStatisticsData();
 
     int extractStatsData(int index,
@@ -81,11 +79,10 @@ class StatsGenPlotWidget : public QWidget, private Ui::StatsGenPlotWidget
     uint32_t getDistributionType() { return m_DistributionType; }
     void blockDistributionTypeChanges(bool block);
 
-    void setPhaseName(const QString &phaseName);
-    void setWidgetTitle(const QString &widgetTitle);
-
-    void setXAxisName(QString name);
-    void setYAxisName(QString name);
+    void setDataTitle(const QString &title);
+    void setPlotTitle(const QString &title);
+    void setXAxisName(const QString &name);
+    void setYAxisName(const QString &name);
 
     void setRowOperationEnabled(bool b);
 
@@ -117,25 +114,29 @@ class StatsGenPlotWidget : public QWidget, private Ui::StatsGenPlotWidget
   signals:
     void userEditedData();
 
-  protected slots:
+  public slots:
     void updatePlotCurves();
     void userCommittedData(QWidget* w);
-    // Auto Hook up Slots
-    void on_addRowBtn_clicked();
-    void on_deleteRowBtn_clicked();
-    void on_distributionTypeCombo_currentIndexChanged(int index);
+    void highlightCurve(int index);
+    void requestContextMenu(const QPoint& pos);
+    void showDataWindow(bool b);
 
   protected:
     void resetTableModel();
+    void initQwtPlot(QString xAxisName, QString yAxisName, QwtPlot* plot);
 
   private:
-    unsigned int m_DistributionType;
+    unsigned int          m_DistributionType;
     SGAbstractTableModel* m_TableModel;
-    QwtPlotGrid* m_grid;
-    unsigned int m_StatsType;
-    bool m_UserUpdatedData;
+    QwtPlotGrid*          m_grid;
+    unsigned int          m_StatsType;
+    bool                  m_UserUpdatedData;
 
     QVector<QwtPlotCurve* > m_PlotCurves;
+    QWidget*                m_TableViewWidget;
+    QTableView*             m_TableView;
+    QPoint                  m_ContextMenuPoint;
+
 
     StatsGenPlotWidget(const StatsGenPlotWidget&); // Copy Constructor Not Implemented
     void operator=(const StatsGenPlotWidget&); // Operator '=' Not Implemented

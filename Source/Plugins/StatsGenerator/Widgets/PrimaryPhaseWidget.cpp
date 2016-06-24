@@ -48,7 +48,6 @@
 #include <QtGui/QIntValidator>
 #include <QtGui/QDoubleValidator>
 
-
 // Needed for AxisAngle_t and Crystal Symmetry constants
 #include "EbsdLib/EbsdConstants.h"
 
@@ -77,23 +76,26 @@
 #include <qwt_plot_grid.h>
 #include <qwt_plot_curve.h>
 #include <qwt_plot_marker.h>
+#include <qwt_plot_shapeitem.h>
+#include <qwt_symbol.h>
+
 
 #define CHECK_ERROR_ON_WRITE(var, msg)\
   if (err < 0) {\
-    QMessageBox::critical(this, tr("StatsGenerator"),\
-                          tr("There was an error writing the " msg " to the HDF5 file"),\
-                          QMessageBox::Ok,\
-                          QMessageBox::Ok);\
-    return err;\
+  QMessageBox::critical(this, tr("StatsGenerator"),\
+  tr("There was an error writing the " msg " to the HDF5 file"),\
+  QMessageBox::Ok,\
+  QMessageBox::Ok);\
+  return err;\
   }
 
 
 #define CHECK_STATS_READ_ERROR(err, group, dataset)\
   if (err < 0) {\
-    qDebug() << "PrimaryPhaseWidget::on_actionOpen_triggered Error: Could not read '" << group << "' data set '" << dataset << "'" << "\n";\
-    qDebug() << "  File: " << __FILE__ << "\n";\
-    qDebug() << "  Line: " << __LINE__ << "\n";\
-    return err;\
+  qDebug() << "PrimaryPhaseWidget::on_actionOpen_triggered Error: Could not read '" << group << "' data set '" << dataset << "'" << "\n";\
+  qDebug() << "  File: " << __FILE__ << "\n";\
+  qDebug() << "  Line: " << __LINE__ << "\n";\
+  return err;\
   }
 
 // Include the MOC generated CPP file which has all the QMetaObject methods/data
@@ -109,15 +111,8 @@ PrimaryPhaseWidget::PrimaryPhaseWidget(QWidget* parent) :
   m_TotalPhaseFraction(1.0),
   m_DataHasBeenGenerated(false),
   m_BulkLoadFailure(false),
-  m_PhaseIndex(0),
+  m_PhaseIndex(-1),
   m_CrystalStructure(Ebsd::CrystalStructure::Cubic_High),
-  m_SizeDistributionCurve(NULL),
-  m_CutOffMin(NULL),
-  m_CutOffMax(NULL),
-  m_grid(NULL),
-  m_MuValidator(NULL),
-  m_SigmaValidator(NULL),
-
   m_Omega3Plot(NULL),
   m_BOverAPlot(NULL),
   m_COverAPlot(NULL),
@@ -167,53 +162,16 @@ AbstractMicrostructurePresetFactory::Pointer RegisterPresetFactory(QComboBox* mi
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
-void PrimaryPhaseWidget::addTreeWidgetItems(QTreeWidget* treeWidget)
+void PrimaryPhaseWidget::setPhaseName(const QString &phaseName)
 {
-  QTreeWidgetItem* widgetItem = new QTreeWidgetItem(treeWidget);
-  widgetItem->setText(0, m_PhaseName->text());
-
-  PhaseTreeWidgetItem* sizeDistItem = new PhaseTreeWidgetItem(widgetItem);
-  sizeDistItem->setText(0, "Size Distribution");
-  sizeDistItem->setStatsWidget(this);
-
-  PhaseTreeWidgetItem* omega3DistItem = new PhaseTreeWidgetItem(widgetItem);
-  omega3DistItem->setText(0, "Omega3 Distribution");
-  omega3DistItem->setStatsWidget(m_Omega3Plot);
-
-  PhaseTreeWidgetItem* shapeItemAB = new PhaseTreeWidgetItem(widgetItem);
-  shapeItemAB->setText(0, "Shape Distribution (A/B)");
-  shapeItemAB->setStatsWidget(m_BOverAPlot);
-
-  PhaseTreeWidgetItem* shapeItemCA = new PhaseTreeWidgetItem(widgetItem);
-  shapeItemCA->setText(0, "Shape Distribution (C/A)");
-  shapeItemCA->setStatsWidget(m_COverAPlot);
-
-  PhaseTreeWidgetItem* neighborItem = new PhaseTreeWidgetItem(widgetItem);
-  neighborItem->setText(0, "Neighbor Distribution");
-  neighborItem->setStatsWidget(m_NeighborPlot);
-
-  PhaseTreeWidgetItem* mdfItem = new PhaseTreeWidgetItem(widgetItem);
-  mdfItem->setText(0, "ODF & MDF");
-  mdfItem->setStatsWidget(m_ODFWidget);
-
-  PhaseTreeWidgetItem* axisOdfItem = new PhaseTreeWidgetItem(widgetItem);
-  axisOdfItem->setText(0, "Axis ODF");
-  axisOdfItem->setStatsWidget(m_AxisODFWidget);
+  m_PhaseNameLabel->setText(phaseName);
 }
-
 
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
 void PrimaryPhaseWidget::setupGui()
 {
-  setWidgetTitle("Size Distribution");
-  distributionTypeCombo->addItem(SIMPL::StringConstants::BetaDistribution.toLatin1().data());
-  distributionTypeCombo->addItem(SIMPL::StringConstants::LogNormalDistribution.toLatin1().data());
-  distributionTypeCombo->addItem(SIMPL::StringConstants::PowerLawDistribution.toLatin1().data());
-  distributionTypeCombo->setCurrentIndex(SIMPL::DistributionType::LogNormal);
-  // Turn off all the plot widgets
-  setTabsPlotTabsEnabled(false);
 
   QLocale loc = QLocale::system();
 
@@ -230,55 +188,29 @@ void PrimaryPhaseWidget::setupGui()
   // Register the Rolled Preset
   presetFactory = RegisterPresetFactory<PrimaryRolledPresetFactory>(microstructurePresetCombo);
 
-  m_MuValidator = new QDoubleValidator(m_Mu_SizeDistribution);
-  m_MuValidator->setLocale(loc);
-  m_MuValidator->setRange(0.0001, 10.0, 4);
 
-  m_Mu_SizeDistribution->setValidator(m_MuValidator);
-
-  m_SigmaValidator = new QDoubleValidator(m_Sigma_SizeDistribution);
-  m_SigmaValidator->setLocale(loc);
-  m_SigmaValidator->setRange(0.0000, 1.0, 4);
-  m_Sigma_SizeDistribution->setValidator(m_SigmaValidator);
-
-  QDoubleValidator* minVal = new QDoubleValidator(0.000, std::numeric_limits<double>::infinity(), 4, m_MinSigmaCutOff);
-  minVal->setLocale(loc);
-  m_MinSigmaCutOff->setValidator(minVal);
-
-  QDoubleValidator* maxVal = new QDoubleValidator(0.000, std::numeric_limits<double>::infinity(), 4, m_MinSigmaCutOff);
-  maxVal->setLocale(loc);
-  m_MaxSigmaCutOff->setValidator(maxVal);
 
   // Select the first Preset in the list
   microstructurePresetCombo->setCurrentIndex(0);
   microstructurePresetCombo->blockSignals(false);
 
-  float mu = 1.0f;
-  float sigma = 0.1f;
-  float minCutOff = 5.0f;
-  float maxCutOff = 5.0f;
-  float binStepSize = 0.5f;
+  float mu = m_FeatureSizeWidget->getMu();
+  float sigma = m_FeatureSizeWidget->getSigma();
+  float minCutOff = m_FeatureSizeWidget->getMinCutOff();
+  float maxCutOff = m_FeatureSizeWidget->getMaxCutOff();
+  float binStepSize = m_FeatureSizeWidget->getBinStep();
 
 
-  m_SizeDistributionPlot->setCanvasBackground(QColor(Qt::white));
-  m_SizeDistributionPlot->setTitle("Size Distribution");
+  //m_grid->attach(m_SizeDistributionPlot);
+  while(m_PlotToolBox->count() > 0)
+  {
+    m_PlotToolBox->removeItem(0);
+  }
 
-  m_grid = new QwtPlotGrid;
-  m_grid->enableXMin(true);
-  m_grid->enableYMin(true);
-#if (QWT_VERSION > 0x060000)
-  m_grid->setMajorPen(QPen(Qt::gray, 0, Qt::SolidLine));
-  m_grid->setMinorPen(QPen(Qt::lightGray, 0, Qt::DotLine));
-#else
-  m_grid->setMajPen(QPen(Qt::gray, 0, Qt::SolidLine));
-  m_grid->setMinPen(QPen(Qt::lightGray, 0, Qt::DotLine));
-#endif
-  m_grid->attach(m_SizeDistributionPlot);
 
   m_Omega3Plot = new StatsGenPlotWidget(nullptr);
   StatsGenPlotWidget* w = m_Omega3Plot;
-  w->setWidgetTitle("Omega 3 Distribution");
-  w->setPlotTitle(QString("Size Vs. Omega 3"));
+  w->setDataTitle(QString("Omega 3"));
   w->setXAxisName(QString("Omega 3"));
   w->setYAxisName(QString("Frequency"));
   w->setDistributionType(SIMPL::DistributionType::Beta);
@@ -294,11 +226,14 @@ void PrimaryPhaseWidget::setupGui()
           this, SLOT(dataWasEdited()));
   connect(m_Omega3Plot, SIGNAL(userEditedData()),
           this, SIGNAL(phaseParametersChanged()));
+  connect(m_FeatureSizeWidget, SIGNAL(binSelected(int)),
+          m_Omega3Plot, SLOT(highlightCurve(int)));
+
+  m_PlotToolBox->addItem(w, QString("Omega 3 Distribution"));
 
   m_BOverAPlot = new StatsGenPlotWidget(nullptr);
   w = m_BOverAPlot;
-  w->setWidgetTitle("B/A Shape Distribution");
-  w->setPlotTitle(QString("B/A Shape Distribution"));
+  w->setDataTitle(QString("B/A"));
   w->setXAxisName(QString("B/A"));
   w->setYAxisName(QString("Frequency"));
   w->setDistributionType(SIMPL::DistributionType::Beta);
@@ -314,11 +249,14 @@ void PrimaryPhaseWidget::setupGui()
           this, SLOT(dataWasEdited()));
   connect(m_BOverAPlot, SIGNAL(userEditedData()),
           this, SIGNAL(phaseParametersChanged()));
+  connect(m_FeatureSizeWidget, SIGNAL(binSelected(int)),
+          m_BOverAPlot, SLOT(highlightCurve(int)));
+  m_PlotToolBox->addItem(w, QString("B/A Shape Distribution"));
+
 
   m_COverAPlot = new StatsGenPlotWidget(nullptr);
   w = m_COverAPlot;
-  w->setWidgetTitle(QString("C/A Shape Distribution"));
-  w->setPlotTitle(QString("C/A Shape Distribution"));
+  w->setDataTitle(QString("C/A"));
   w->setXAxisName(QString("C/A"));
   w->setYAxisName(QString("Frequency"));
   w->setDistributionType(SIMPL::DistributionType::Beta);
@@ -334,11 +272,14 @@ void PrimaryPhaseWidget::setupGui()
           this, SLOT(dataWasEdited()));
   connect(m_COverAPlot, SIGNAL(userEditedData()),
           this, SIGNAL(phaseParametersChanged()));
+  connect(m_FeatureSizeWidget, SIGNAL(binSelected(int)),
+          m_COverAPlot, SLOT(highlightCurve(int)));
+  m_PlotToolBox->addItem(w, QString("C/A Shape Distribution"));
+
 
   m_NeighborPlot = new StatsGenPlotWidget(nullptr);
   w = m_NeighborPlot;
-  w->setWidgetTitle(QString("Neighbors Distribution"));
-  w->setPlotTitle(QString("Neighbors Distributions"));
+  w->setDataTitle(QString("Number of Neighbors"));
   w->setXAxisName(QString("Number of Features (within 1 diameter)"));
   w->setYAxisName(QString("Frequency"));
   w->setDistributionType(SIMPL::DistributionType::LogNormal);
@@ -354,10 +295,13 @@ void PrimaryPhaseWidget::setupGui()
           this, SLOT(dataWasEdited()));
   connect(m_NeighborPlot, SIGNAL(userEditedData()),
           this, SIGNAL(phaseParametersChanged()));
+  connect(m_FeatureSizeWidget, SIGNAL(binSelected(int)),
+          m_NeighborPlot, SLOT(highlightCurve(int)));
+  m_PlotToolBox->addItem(w, QString("Neighbors Distribution"));
 
   // For the ODF Tab we want the MDF functionality
-  m_ODFWidget = new StatsGenODFWidget(nullptr);
-  m_ODFWidget->setWidgetTitle("ODF & MDF Settings");
+  m_ODFWidget = new StatsGenODFWidget(m_StackedWidget);
+  m_ODFWidget->setWidgetTitle("ODF | MDF Settings");
   m_ODFWidget->enableMDFTab(true);
   // Remove any Axis Decorations. The plots are explicitly know to have a -1 to 1 axis min/max
   m_ODFWidget->setEnableAxisDecorations(false);
@@ -366,15 +310,15 @@ void PrimaryPhaseWidget::setupGui()
   connect(m_ODFWidget, SIGNAL(bulkLoadEvent(bool)),
           this, SLOT(bulkLoadEvent(bool)));
 
-  m_AxisODFWidget = new SGAxisODFWidget(nullptr);
+  m_AxisODFWidget = new SGAxisODFWidget(m_StackedWidget);
   m_AxisODFWidget->setWidgetTitle("Axis ODF Settings");
   // Remove any Axis Decorations. The plots are explicitly know to have a -1 to 1 axis min/max
   m_AxisODFWidget->setEnableAxisDecorations(false);
   connect(m_AxisODFWidget, SIGNAL(axisODFParametersChanged()),
           this, SIGNAL(phaseParametersChanged()));
 
-  updateSizeDistributionPlot();
-  calculateNumberOfBins();
+  m_StackedWidget->insertWidget(1, m_ODFWidget);
+  m_StackedWidget->insertWidget(2, m_AxisODFWidget);
 }
 
 // -----------------------------------------------------------------------------
@@ -383,12 +327,13 @@ void PrimaryPhaseWidget::setupGui()
 void PrimaryPhaseWidget::setPhaseIndex(int index)
 {
   m_PhaseIndex = index;
-  m_Omega3Plot->setPhaseIndex(m_PhaseIndex);
-  m_BOverAPlot->setPhaseIndex(m_PhaseIndex);
-  m_COverAPlot->setPhaseIndex(m_PhaseIndex);
-  m_NeighborPlot->setPhaseIndex(m_PhaseIndex);
-  m_ODFWidget->setPhaseIndex(m_PhaseIndex);
-  m_AxisODFWidget->setPhaseIndex(m_PhaseIndex);
+  m_FeatureSizeWidget->setPhaseIndex(index);
+  m_Omega3Plot->setPhaseIndex(index);
+  m_BOverAPlot->setPhaseIndex(index);
+  m_COverAPlot->setPhaseIndex(index);
+  m_NeighborPlot->setPhaseIndex(index);
+  m_ODFWidget->setPhaseIndex(index);
+  m_AxisODFWidget->setPhaseIndex(index);
 }
 
 // -----------------------------------------------------------------------------
@@ -402,31 +347,9 @@ int PrimaryPhaseWidget::getPhaseIndex() const
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
-void PrimaryPhaseWidget::setPhaseName(const QString& phaseName)
-{
-  m_PhaseName->setText(phaseName);
-  m_Omega3Plot->setPhaseName(phaseName);
-  m_BOverAPlot->setPhaseName(phaseName);
-  m_COverAPlot->setPhaseName(phaseName);
-  m_NeighborPlot->setPhaseName(phaseName);
-  m_ODFWidget->setPhaseName(phaseName);
-  m_AxisODFWidget->setPhaseName(phaseName);
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-void PrimaryPhaseWidget::setWidgetTitle(const QString &widgetTitle)
-{
-  m_WidgetTitle->setText(widgetTitle);
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
 void PrimaryPhaseWidget::setCrystalStructure(unsigned int xtal)
 {
-  m_CrystalStructure = xtal;
+  m_FeatureSizeWidget->setCrystalStructure(xtal);
   m_Omega3Plot->setCrystalStructure(xtal);
   m_BOverAPlot->setCrystalStructure(xtal);
   m_COverAPlot->setCrystalStructure(xtal);
@@ -466,53 +389,8 @@ QString PrimaryPhaseWidget::getComboString()
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
-int PrimaryPhaseWidget::gatherSizeDistributionFromGui(float& mu, float& sigma, float& minCutOff, float& maxCutOff, float& stepSize)
-{
-  QLocale loc = QLocale::system();
-
-  bool ok = false;
-  mu = loc.toFloat(m_Mu_SizeDistribution->text(), &ok);
-  if (ok == false)
-  {
-    return 0;
-  }
-  sigma = loc.toFloat(m_Sigma_SizeDistribution->text(), &ok);
-  if (ok == false)
-  {
-    return 0;
-  }
-  minCutOff = loc.toFloat(m_MinSigmaCutOff->text(), &ok);
-  if (ok == false)
-  {
-    return 0;
-  }
-  maxCutOff = loc.toFloat(m_MaxSigmaCutOff->text(), &ok);
-  if (ok == false)
-  {
-    return 0;
-  }
-  stepSize = loc.toFloat(m_BinStepSize->text(), &ok);
-  if (ok == false)
-  {
-    return 0;
-  }
-  return 1;
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-void PrimaryPhaseWidget::setTabsPlotTabsEnabled(bool b)
-{
-
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
 void PrimaryPhaseWidget::dataWasEdited()
 {
-  setTabsPlotTabsEnabled(true);
 }
 
 // -----------------------------------------------------------------------------
@@ -533,23 +411,75 @@ void PrimaryPhaseWidget::updatePlots()
 {
   if (m_DataHasBeenGenerated == true)
   {
-    QProgressDialog progress("Generating Data ....", "Cancel", 0, 4, this);
+    int i = 0;
+    QString msg;
+    QTextStream out(&msg);
+    QProgressDialog progress("Generating Data ....", "Cancel", 0, 8, this);
     progress.setWindowModality(Qt::WindowModal);
-    progress.setMinimumDuration(2000);
+    progress.setMinimumDuration(1);
 
-    progress.setValue(1);
-    progress.setLabelText("[1/3] Calculating Size Distributions ...");
-    plotSizeDistribution();
+    progress.setValue(++i);
+    msg = QString("");
+    out << "[" << i << "/8]";
+    progress.setLabelText(msg + " Calculating Size Distributions ...");
+    m_FeatureSizeWidget->plotSizeDistribution();
 
-    progress.setValue(2);
-    progress.setLabelText("[2/3] Calculating ODF Data ...");
+    float mu = m_FeatureSizeWidget->getMu();
+    float sigma = m_FeatureSizeWidget->getSigma();
+    float minCutOff = m_FeatureSizeWidget->getMinCutOff();
+    float maxCutOff = m_FeatureSizeWidget->getMaxCutOff();
+    float stepSize = m_FeatureSizeWidget->getBinStep();
+    QwtArray<float> binSizes = m_FeatureSizeWidget->getBinSizes();
+
+    // Now that we have bins and feature sizes, push those to the other plot widgets
+    // Setup Each Plot Widget
+    // The MicroPreset class will set the distribution for each of the plots
+    progress.setValue(++i);
+    msg = QString("");
+    out << "[" << i << "/8]";
+    progress.setLabelText(msg + " Calculating Omega3 Distributions ...");
+    m_Omega3Plot->setSizeDistributionValues(mu, sigma, minCutOff, maxCutOff, stepSize);
+    m_MicroPreset->initializeOmega3TableModel(m_Omega3Plot, binSizes);
+
+    progress.setValue(++i);
+    msg = QString("");
+    out << "[" << i << "/8]";
+    progress.setLabelText(msg + " Calculating B/A Size Distributions ...");
+    m_BOverAPlot->setSizeDistributionValues(mu, sigma, minCutOff, maxCutOff, stepSize);
+    m_MicroPreset->initializeBOverATableModel(m_BOverAPlot, binSizes);
+
+    progress.setValue(++i);
+    msg = QString("");
+    out << "[" << i << "/8]";
+    progress.setLabelText(msg + " Calculating C/A Size Distributions ...");
+    m_COverAPlot->setSizeDistributionValues(mu, sigma, minCutOff, maxCutOff, stepSize);
+    m_MicroPreset->initializeCOverATableModel(m_COverAPlot, binSizes);
+
+    progress.setValue(++i);
+    msg = QString("");
+    out << "[" << i << "/8]";
+    progress.setLabelText(msg + " Calculating Neighbor Distributions ...");
+    m_NeighborPlot->setSizeDistributionValues(mu, sigma, minCutOff, maxCutOff, stepSize);
+    m_MicroPreset->initializeNeighborTableModel(m_NeighborPlot, binSizes);
+
+    // Get any presets for the ODF/AxisODF/MDF also
+    m_MicroPreset->initializeODFTableModel(m_ODFWidget);
+    m_MicroPreset->initializeAxisODFTableModel(m_AxisODFWidget);
+    m_MicroPreset->initializeMDFTableModel(m_ODFWidget->getMDFWidget());
+
+    progress.setValue(++i);
+    msg = QString("");
+    out << "[" << i << "/8]";
+    progress.setLabelText(msg + " Calculating ODF & MDF ...");
     m_ODFWidget->updatePlots();
 
-    progress.setValue(3);
-    progress.setLabelText("[3/3] Calculating Axis ODF Data ...");
+    progress.setValue(++i);
+    msg = QString("");
+    out << "[" << i << "/8]";
+    progress.setLabelText(msg + " Calculating Axis ODF ...");
     m_AxisODFWidget->updatePlots();
 
-    progress.setValue(4);
+    progress.setValue(++i);
   }
 }
 
@@ -566,338 +496,55 @@ void PrimaryPhaseWidget::on_m_GenerateDefaultData_clicked()
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
+void PrimaryPhaseWidget::on_m_FeatureSizeDistBtn_toggled()
+{
+  if(m_FeatureSizeDistBtn->isChecked())
+  {
+    m_StackedWidget->setCurrentIndex(0);
+  }
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void PrimaryPhaseWidget::on_m_OdfBtn_toggled()
+{
+  if(m_OdfBtn->isChecked())
+  {
+    m_StackedWidget->setCurrentIndex(1);
+  }
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void PrimaryPhaseWidget::on_m_AxisOdfBtn_toggled()
+{
+  if(m_AxisOdfBtn->isChecked())
+  {
+    m_StackedWidget->setCurrentIndex(2);
+  }
+}
+
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
 void PrimaryPhaseWidget::bulkLoadEvent(bool fail)
 {
   m_BulkLoadFailure = fail;
 }
 
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-bool PrimaryPhaseWidget::validateValue(QDoubleValidator* val, QLineEdit* lineEdit)
-{
-  QString value(lineEdit->text());
-  int not_used = 0;
-  QValidator::State state = val->validate(value, not_used);
-  if(state != QValidator::Acceptable)
-  {
-    lineEdit->setStyleSheet("border: 1px solid red;");
-    return false;
-  }
-  else
-  {
-    lineEdit->setStyleSheet("");
-  }
-  return true;
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-bool PrimaryPhaseWidget::validateMuSigma()
-{
-  bool muValid = validateValue(m_MuValidator, m_Mu_SizeDistribution);
-  bool sigmaValid = validateValue(m_SigmaValidator, m_Sigma_SizeDistribution);
-
-  if (muValid && sigmaValid)
-  {
-    m_GenerateDefaultData->setEnabled(true);
-    return true;
-  }
-
-  m_NumberBinsGenerated->setText("Error");
-  m_GenerateDefaultData->setEnabled(false);
-  return false;
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-void PrimaryPhaseWidget::on_m_Mu_SizeDistribution_textChanged(const QString& text)
-{
-  Q_UNUSED(text)
-  if (!validateMuSigma())
-  {
-    return;
-  }
-  updateSizeDistributionPlot();
-  m_Mu_SizeDistribution->setFocus();
-  calculateNumberOfBins();
-  emit phaseParametersChanged();
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-void PrimaryPhaseWidget::on_m_Sigma_SizeDistribution_textChanged(const QString& text)
-{
-  Q_UNUSED(text)
-  if (!validateMuSigma())
-  {
-    return;
-  }
-  updateSizeDistributionPlot();
-  m_Sigma_SizeDistribution->setFocus();
-  calculateNumberOfBins();
-  emit phaseParametersChanged();
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-void PrimaryPhaseWidget::on_m_MinSigmaCutOff_textChanged(const QString& text)
-{
-  Q_UNUSED(text)
-  updateSizeDistributionPlot();
-  m_MinSigmaCutOff->setFocus();
-  calculateNumberOfBins();
-  emit phaseParametersChanged();
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-void PrimaryPhaseWidget::on_m_MaxSigmaCutOff_textChanged(const QString& text)
-{
-  Q_UNUSED(text)
-  updateSizeDistributionPlot();
-  m_MaxSigmaCutOff->setFocus();
-  calculateNumberOfBins();
-  emit phaseParametersChanged();
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-void PrimaryPhaseWidget::on_m_BinStepSize_valueChanged(double v)
-{
-  Q_UNUSED(v)
-  calculateNumberOfBins();
-  emit phaseParametersChanged();
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-void PrimaryPhaseWidget::calculateNumberOfBins()
-{
-  float mu = 1.0;
-  float sigma = 1.0;
-  float minCutOff = 1.0;
-  float maxCutOff = 1.0;
-  float stepSize = 1.0;
-  float max, min;
-  int err = gatherSizeDistributionFromGui(mu, sigma, minCutOff, maxCutOff, stepSize);
-  if (err == 0)
-  {
-    return;
-  }
-
-  int n = StatsGen::ComputeNumberOfBins(mu, sigma, minCutOff, maxCutOff, stepSize, max, min);
-  if(err < 0)
-  {
-    m_NumberBinsGenerated->setText("Error");
-  }
-  else
-  {
-    m_NumberBinsGenerated->setText(QString::number(n));
-  }
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-int PrimaryPhaseWidget::calculateNumberOfBins(float mu, float sigma, float minCutOff, float maxCutOff, float stepSize)
-{
-  float max, min; // Only needed for the method. Not used otherwise.
-
-  return StatsGen::ComputeNumberOfBins(mu, sigma, minCutOff, maxCutOff, stepSize, max, min);
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-int PrimaryPhaseWidget::computeBinsAndCutOffs( float mu, float sigma,
-                                               float minCutOff, float maxCutOff,
-                                               float binStepSize,
-                                               QwtArray<float>& binsizes,
-                                               QwtArray<float>& xCo,
-                                               QwtArray<float>& yCo,
-                                               float& xMax, float& yMax,
-                                               QwtArray<float>& x,
-                                               QwtArray<float>& y)
-{
-  int err = 0;
-  int size = 250;
-
-
-  err = StatsGen::GenLogNormalPlotData<QwtArray<float> > (mu, sigma, x, y, size);
-  if (err == 1)
-  {
-    //TODO: Present Error Message
-    return -1;
-  }
-
-  //  float xMax = std::numeric_limits<float >::min();
-  //  float yMax = std::numeric_limits<float >::min();
-  for (int i = 0; i < size; ++i)
-  {
-    //   qDebug() << x[i] << "  " << y[i] << "\n";
-    if (x[i] > xMax)
-    {
-      xMax = x[i];
-    }
-    if (y[i] > yMax)
-    {
-      yMax = y[i];
-    }
-  }
-
-  xCo.clear();
-  yCo.clear();
-  int numsizebins = 1;
-  binsizes.clear();
-  // QwtArray<int> numfeatures;
-  err = StatsGen::GenCutOff<float, QwtArray<float> > (mu, sigma, minCutOff, maxCutOff, binStepSize, xCo, yCo, yMax, numsizebins, binsizes);
-
-  return err;
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-void PrimaryPhaseWidget::updateSizeDistributionPlot()
-{
-  float mu = 1.0;
-  float sigma = 1.0;
-  float minCutOff = 1.0;
-  float maxCutOff = 1.0;
-  float stepSize = 1.0;
-  int err = gatherSizeDistributionFromGui(mu, sigma, minCutOff, maxCutOff, stepSize);
-  if (err == 0)
-  {
-    return;
-  }
-
-  QwtArray<float> xCo;
-  QwtArray<float> yCo;
-  QwtArray<float> binsizes;
-  float xMax = std::numeric_limits<float >::min();
-  float yMax = std::numeric_limits<float >::min();
-  QwtArray<float> x;
-  QwtArray<float> y;
-  err = computeBinsAndCutOffs(mu, sigma, minCutOff, maxCutOff, stepSize, binsizes, xCo, yCo, xMax, yMax, x, y);
-  if (err < 0) { return; }
-
-  if (NULL == m_SizeDistributionCurve)
-  {
-    m_SizeDistributionCurve = new QwtPlotCurve("Size Distribution");
-    m_SizeDistributionCurve->setRenderHint(QwtPlotItem::RenderAntialiased);
-    m_SizeDistributionCurve->setPen(QPen(Qt::red));
-    m_SizeDistributionCurve->attach(m_SizeDistributionPlot);
-  }
-
-  // Place a vertical Line on the plot where the Min and Max Cutoff values are
-  if (NULL == m_CutOffMin)
-  {
-    m_CutOffMin = new QwtPlotMarker();
-    m_CutOffMin->attach(m_SizeDistributionPlot);
-  }
-  m_CutOffMin->setLabel(QString::fromLatin1("Cut Off Min Feature Diameter"));
-  m_CutOffMin->setLabelAlignment(Qt::AlignLeft | Qt::AlignBottom);
-  m_CutOffMin->setLabelOrientation(Qt::Vertical);
-  m_CutOffMin->setLineStyle(QwtPlotMarker::VLine);
-  m_CutOffMin->setLinePen(QPen(Qt::blue, 1, Qt::SolidLine));
-  m_CutOffMin->setXValue(xCo[0]);
-
-  if (NULL == m_CutOffMax)
-  {
-    m_CutOffMax = new QwtPlotMarker();
-    m_CutOffMax->attach(m_SizeDistributionPlot);
-  }
-  m_CutOffMax->setLabel(QString::fromLatin1("Cut Off Max Feature Diameter"));
-  m_CutOffMax->setLabelAlignment(Qt::AlignLeft | Qt::AlignBottom);
-  m_CutOffMax->setLabelOrientation(Qt::Vertical);
-  m_CutOffMax->setLineStyle(QwtPlotMarker::VLine);
-  m_CutOffMax->setLinePen(QPen(Qt::blue, 1, Qt::SolidLine));
-  m_CutOffMax->setXValue(xCo[1]);
-
-  QwtArray<double> xD(x.size());
-  QwtArray<double> yD(x.size());
-  for (int i = 0; i < x.size(); ++i)
-  {
-    xD[i] = static_cast<double>(x[i]);
-    yD[i] = static_cast<double>(y[i]);
-  }
-
-#if QWT_VERSION >= 0x060000
-  m_SizeDistributionCurve->setSamples(xD, yD);
-#else
-  m_SizeDistributionCurve->setData(xD, yD);
-#endif
-
-  m_SizeDistributionPlot->setAxisScale(QwtPlot::xBottom, xCo[0] - (xCo[0] * 0.1), xCo[1] * 1.10);
-  m_SizeDistributionPlot->setAxisScale(QwtPlot::yLeft, 0.0, yMax);
-
-  m_SizeDistributionPlot->replot();
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-void PrimaryPhaseWidget::plotSizeDistribution()
-{
-  // We have valid data so enable the other plot tabs
-  setTabsPlotTabsEnabled(true);
-
-  float mu = 1.0;
-  float sigma = 1.0;
-  float minCutOff = 1.0;
-  float maxCutOff = 1.0;
-  float stepSize = 1.0;
-  int err = gatherSizeDistributionFromGui(mu, sigma, minCutOff, maxCutOff, stepSize);
-  if (err == 0) { return; }
-
-  QwtArray<float> xCo;
-  QwtArray<float> yCo;
-  QwtArray<float> binsizes;
-  float xMax = std::numeric_limits<float >::min();
-  float yMax = std::numeric_limits<float >::min();
-  QwtArray<float> x;
-  QwtArray<float> y;
-  err = computeBinsAndCutOffs(mu, sigma, minCutOff, maxCutOff, stepSize, binsizes, xCo, yCo, xMax, yMax, x, y);
-  if (err < 0) { return; }
-
-  // Now that we have bins and feature sizes, push those to the other plot widgets
-  // Setup Each Plot Widget
-  // The MicroPreset class will set the distribution for each of the plots
-  m_Omega3Plot->setSizeDistributionValues(mu, sigma, minCutOff, maxCutOff, stepSize);
-  m_MicroPreset->initializeOmega3TableModel(m_Omega3Plot, binsizes);
-
-  m_BOverAPlot->setSizeDistributionValues(mu, sigma, minCutOff, maxCutOff, stepSize);
-  m_MicroPreset->initializeBOverATableModel(m_BOverAPlot, binsizes);
-
-  m_COverAPlot->setSizeDistributionValues(mu, sigma, minCutOff, maxCutOff, stepSize);
-  m_MicroPreset->initializeCOverATableModel(m_COverAPlot, binsizes);
-
-  m_NeighborPlot->setSizeDistributionValues(mu, sigma, minCutOff, maxCutOff, stepSize);
-  m_MicroPreset->initializeNeighborTableModel(m_NeighborPlot, binsizes);
-
-  // Get any presets for the ODF/AxisODF/MDF also
-  m_MicroPreset->initializeODFTableModel(m_ODFWidget);
-  m_MicroPreset->initializeAxisODFTableModel(m_AxisODFWidget);
-  m_MicroPreset->initializeMDFTableModel(m_ODFWidget->getMDFWidget());
-}
 
 #define SGWIGET_WRITE_ERROR_CHECK(var)\
   if (err < 0)  {\
-    QString msg ("Error Writing Data ");\
-    msg.append((var));\
-    msg.append(" to the HDF5 file");\
-    QMessageBox::critical(this, tr("StatsGenerator"),\
-                          msg,\
-                          QMessageBox::Default);\
-    retErr = -1;\
+  QString msg ("Error Writing Data ");\
+  msg.append((var));\
+  msg.append(" to the HDF5 file");\
+  QMessageBox::critical(this, tr("StatsGenerator"),\
+  msg,\
+  QMessageBox::Default);\
+  retErr = -1;\
   }
 
 // -----------------------------------------------------------------------------
@@ -914,33 +561,12 @@ int PrimaryPhaseWidget::gatherStatsData(AttributeMatrix::Pointer attrMat, bool p
   }
   int retErr = 0;
   int err = 0;
-  float mu = 1.0f;
-  float sigma = 1.0f;
-  float minCutOff = 1.0f;
-  float maxCutOff = 1.0f;
-  float binStep = 1.0f;
-  gatherSizeDistributionFromGui(mu, sigma, minCutOff, maxCutOff, binStep);
+
   float calcPhaseFraction = m_PhaseFraction / m_TotalPhaseFraction;
 
-  QwtArray<float> xCo;
-  QwtArray<float> yCo;
-  QwtArray<float> binsizes;
-  float xMax = std::numeric_limits<float>::min();
-  float yMax = std::numeric_limits<float>::min();
-  QwtArray<float> x;
-  QwtArray<float> y;
-  err = computeBinsAndCutOffs(mu, sigma, minCutOff, maxCutOff, binStep, binsizes, xCo, yCo, xMax, yMax, x, y);
-  if (err < 0)
-  {
-    return err;
-  }
 
-  // We need to compute the Max and Min Diameter Bin Values
-  float mindiameter = xCo[0];
-  float maxdiameter = xCo[1];
-  float avglogdiam = mu;
-  float sdlogdiam = sigma;
-  float stepSize = binStep;
+
+
 
   // Get pointers
   IDataArray::Pointer iDataArray = attrMat->getAttributeArray(SIMPL::EnsembleData::CrystalStructures);
@@ -958,22 +584,8 @@ int PrimaryPhaseWidget::gatherStatsData(AttributeMatrix::Pointer attrMat, bool p
     PrimaryStatsData* primaryStatsData = PrimaryStatsData::SafePointerDownCast(statsData.get());
 
     primaryStatsData->setPhaseFraction(calcPhaseFraction);
-    // Feature Diameter Info
-    primaryStatsData->setBinStepSize(stepSize);
-    primaryStatsData->setMaxFeatureDiameter(maxdiameter);
-    primaryStatsData->setMinFeatureDiameter(mindiameter);
-    // Feature Size Distribution
-    {
-      VectorOfFloatArray data;
-      FloatArrayType::Pointer d1 = FloatArrayType::CreateArray(1, SIMPL::StringConstants::Average);
-      FloatArrayType::Pointer d2 = FloatArrayType::CreateArray(1, SIMPL::StringConstants::StandardDeviation);
-      data.push_back(d1);
-      data.push_back(d2);
-      d1->setValue(0, avglogdiam);
-      d2->setValue(0, sdlogdiam);
-      primaryStatsData->setFeatureSizeDistribution(data);
-      primaryStatsData->setFeatureSize_DistType(SIMPL::DistributionType::LogNormal);
-    }
+
+    m_FeatureSizeWidget->getStatisticsData(primaryStatsData);
 
     // Now that we have bins and feature sizes, push those to the other plot widgets
     {
@@ -1014,7 +626,7 @@ void PrimaryPhaseWidget::extractStatsData(AttributeMatrix::Pointer attrMat, int 
   float sigma = 1.0f;
   float minCutOff = 5.0f;
   float maxCutOff = 5.0f;
-  float binStepSize, maxFeatureSize, minFeatureSize;
+  float binStepSize = 0.5f;
 
   setPhaseIndex(index);
 
@@ -1036,7 +648,7 @@ void PrimaryPhaseWidget::extractStatsData(AttributeMatrix::Pointer attrMat, int 
   PrimaryStatsData* primaryStatsData = PrimaryStatsData::SafePointerDownCast(statsData.get());
 
   m_PhaseFraction = primaryStatsData->getPhaseFraction();
-
+  m_FeatureSizeWidget->setCrystalStructure(m_CrystalStructure);
   m_Omega3Plot->setCrystalStructure(m_CrystalStructure);
   m_BOverAPlot->setCrystalStructure(m_CrystalStructure);
   m_COverAPlot->setCrystalStructure(m_CrystalStructure);
@@ -1045,53 +657,21 @@ void PrimaryPhaseWidget::extractStatsData(AttributeMatrix::Pointer attrMat, int 
   // m_AxisODFWidget->setCrystalStructure(m_CrystalStructure);
 
 
-  /* SEt the BinNumbers data set */
+  /* Set the BinNumbers data set */
   FloatArrayType::Pointer bins = primaryStatsData->getBinNumbers();
 
-  /* Set the Feature_Diameter_Info Data */
 
-  binStepSize = primaryStatsData->getBinStepSize();
-  m_BinStepSize->blockSignals(true);
-  m_BinStepSize->setValue(binStepSize);
-  m_BinStepSize->blockSignals(false);
-  maxFeatureSize = primaryStatsData->getMaxFeatureDiameter();
-  minFeatureSize = primaryStatsData->getMinFeatureDiameter();
 
-  /* Set the Feature_Size_Distribution Data */
-  VectorOfFloatArray distData = primaryStatsData->getFeatureSizeDistribution();
-  mu = distData[0]->getValue(0);
-  sigma = distData[1]->getValue(0);
-  m_Mu_SizeDistribution->blockSignals(true);
-  m_Sigma_SizeDistribution->blockSignals(true);
-
-  m_Mu_SizeDistribution->setText(QString::number(mu));
-  m_Sigma_SizeDistribution->setText(QString::number(sigma));
-
-  m_Mu_SizeDistribution->blockSignals(false);
-  m_Sigma_SizeDistribution->blockSignals(false);
-
-  minCutOff = (mu - log(minFeatureSize)) / sigma;
-  maxCutOff = (log(maxFeatureSize) - mu) / sigma;
-
-  m_MinSigmaCutOff->blockSignals(true);
-  m_MinSigmaCutOff->setText(QString::number(minCutOff));
-  m_MinSigmaCutOff->blockSignals(false);
-
-  m_MaxSigmaCutOff->blockSignals(true);
-  m_MaxSigmaCutOff->setText(QString::number(maxCutOff));
-  m_MaxSigmaCutOff->blockSignals(false);
-
-  // Update the Size/Weights Plot
-  updateSizeDistributionPlot();
-  m_NumberBinsGenerated->setText(QString::number(bins->getNumberOfTuples()));
-
-  // Now have each of the plots set it's own data
   QVector<float> qbins (bins->getNumberOfTuples());
   for(int i = 0; i < qbins.size(); ++i)
   {
     qbins[i] = bins->getValue(i);
   }
 
+  m_FeatureSizeWidget->extractStatsData(primaryStatsData, index);
+  m_FeatureSizeWidget->gatherSizeDistributionFromGui(mu, sigma, minCutOff, maxCutOff, binStepSize);
+
+  // Now have each of the plots set it's own data
   m_Omega3Plot->setDistributionType(primaryStatsData->getOmegas_DistType(), false);
   m_Omega3Plot->extractStatsData(index, qbins, primaryStatsData->getFeatureSize_Omegas());
   m_Omega3Plot->setSizeDistributionValues(mu, sigma, minCutOff, maxCutOff, binStepSize);
@@ -1114,15 +694,17 @@ void PrimaryPhaseWidget::extractStatsData(AttributeMatrix::Pointer attrMat, int 
   // Set the Axis ODF Data
   m_AxisODFWidget->extractStatsData(index, primaryStatsData, SIMPL::PhaseType::PrimaryPhase);
 
-  // Enable all the tabs
-  setTabsPlotTabsEnabled(true);
+
   m_DataHasBeenGenerated = true;
 }
 
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
-QString PrimaryPhaseWidget::getTabTitle()
+QIcon PrimaryPhaseWidget::getPhaseIcon()
 {
-  return QString("Primary");
+  QIcon icon;
+  icon.addFile(QStringLiteral(":/StatsGenerator/icons/Primary.png"), QSize(), QIcon::Normal, QIcon::Off);
+  icon.addFile(QStringLiteral(":/StatsGenerator/icons/Primary_Selected.png"), QSize(), QIcon::Normal, QIcon::On);
+  return icon;
 }

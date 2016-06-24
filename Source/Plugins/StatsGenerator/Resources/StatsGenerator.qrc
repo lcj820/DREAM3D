@@ -3,5 +3,18 @@
  <qresource>
  <file>StatsGenerator/StatsGeneratorLicense.txt</file>
  <file>StatsGenerator/StatsGeneratorDescription.txt</file>
+ <file>StatsGenerator/icons/Boundary.png</file>
+ <file>StatsGenerator/icons/Matrix.png</file>
+ <file>StatsGenerator/icons/Precipitate.png</file>
+ <file>StatsGenerator/icons/Primary.png</file>
+ <file>StatsGenerator/icons/Transformation.png</file>
+
+  <file>StatsGenerator/icons/Boundary_Selected.png</file>
+ <file>StatsGenerator/icons/Matrix_Selected.png</file>
+ <file>StatsGenerator/icons/Precipitate_Selected.png</file>
+ <file>StatsGenerator/icons/Primary_Selected.png</file>
+ <file>StatsGenerator/icons/Transformation_Selected.png</file>
+
+
  </qresource>
  </RCC>

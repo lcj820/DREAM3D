@@ -73,6 +73,7 @@ class MatrixPhaseWidget : public SGWidget, private Ui::MatrixPhaseWidget
     QString getTabTitle();
 
     int gatherStatsData(AttributeMatrix::Pointer attrMat, bool preflight = false);
+    virtual QIcon getPhaseIcon();
 
   protected slots:
     void dataWasEdited();

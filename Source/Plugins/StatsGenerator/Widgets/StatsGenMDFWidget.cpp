@@ -122,22 +122,6 @@ SGMDFTableModel* StatsGenMDFWidget::tableModel()
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
-void StatsGenMDFWidget::setPhaseName(const QString& phaseName)
-{
-  m_PhaseName->setText(phaseName);
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-void StatsGenMDFWidget::setWidgetTitle(const QString &widgetTitle)
-{
-  m_WidgetTitle->setText(widgetTitle);
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
 void StatsGenMDFWidget::setupGui()
 {
   initQwtPlot("Misorientation Angle(w)", "Freq", m_MDFPlot);
@@ -154,28 +138,45 @@ void StatsGenMDFWidget::setupGui()
 // -----------------------------------------------------------------------------
 void StatsGenMDFWidget::initQwtPlot(QString xAxisName, QString yAxisName, QwtPlot* plot)
 {
-  plot->setAxisTitle(QwtPlot::xBottom, xAxisName);
-  plot->setAxisTitle(QwtPlot::yLeft, yAxisName);
-  plot->setPalette( Qt::black );
-  plot->setCanvasBackground( Qt::black ); //Set the Background colour
 
-  // we want to have the axis scales like a frame around the
-  // canvas
+  QPalette  pal;
+  pal.setColor(QPalette::Text, Qt::white);
+  pal.setColor(QPalette::Foreground, Qt::white);
+  pal.setColor(QPalette::Window, Qt::black);
+
+  plot->setPalette( pal );
+
   plot->plotLayout()->setAlignCanvasToScales( true );
   for ( int axis = 0; axis < QwtPlot::axisCnt; axis++ )
   {
       plot->axisWidget( axis )->setMargin( 0 );
+      plot->axisWidget(axis)->setPalette(pal);
   }
   QwtPlotCanvas *canvas = new QwtPlotCanvas();
 
   canvas->setAutoFillBackground( false );
   canvas->setFrameStyle( QFrame::NoFrame );
-  canvas->setBackgroundRole(QPalette::Background);
-  QPalette pal = canvas->palette();
-  pal.setBrush( QPalette::Window, Qt::black );
-
-  canvas->setPalette( pal );
+  canvas->setPalette(pal);
   plot->setCanvas( canvas );
+
+  QFont font;
+  font.setBold(true);
+
+  QwtText xAxis(xAxisName);
+  xAxis.setColor(Qt::white);
+  xAxis.setRenderFlags( Qt::AlignHCenter | Qt::AlignTop );
+  xAxis.setFont(font);
+
+  QwtText yAxis(yAxisName);
+  yAxis.setColor(Qt::white);
+  yAxis.setRenderFlags( Qt::AlignHCenter | Qt::AlignTop );
+  yAxis.setFont(font);
+
+  const int margin = 5;
+  plot->setContentsMargins( margin, margin, margin, margin );
+
+  plot->setAxisTitle(QwtPlot::xBottom, xAxis);
+  plot->setAxisTitle(QwtPlot::yLeft, yAxis);
 
 }
 

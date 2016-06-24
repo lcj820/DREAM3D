@@ -28,8 +28,10 @@
 class QwtPlotGrid;
 class QwtPlotCurve;
 class QwtPlotMarker;
+class QwtPlotShapeItem;
 class QDoubleValidator;
 class QTreeWidget;
+class StatsGenFeatureSizeWidget;
 class StatsGenPlotWidget;
 class StatsGenODFWidget;
 class SGAxisODFWidget;
@@ -51,6 +53,8 @@ class PrimaryPhaseWidget : public SGWidget, private Ui::PrimaryPhaseWidget
 
     void updatePlots();
 
+    void setPhaseName(const QString &phaseName);
+
     SIMPL_INSTANCE_PROPERTY(unsigned int, PhaseType)
     void setCrystalStructure(unsigned int xtal);
     unsigned int getCrystalStructure() const;
@@ -61,47 +65,26 @@ class PrimaryPhaseWidget : public SGWidget, private Ui::PrimaryPhaseWidget
     SIMPL_INSTANCE_PROPERTY(bool, DataHasBeenGenerated)
     SIMPL_INSTANCE_PROPERTY(bool, BulkLoadFailure)
 
-    void setPhaseName(const QString &phaseName);
-    void setWidgetTitle(const QString &widgetTitle);
-
     void extractStatsData(AttributeMatrix::Pointer attrMat, int index);
 
-    void plotSizeDistribution();
-    void updateSizeDistributionPlot();
-    int computeBinsAndCutOffs( float mu, float sigma,
-                               float minCutOff, float maxCutOff,
-                               float binStepSize,
-                               QwtArray<float>& binsizes,
-                               QwtArray<float>& xCo,
-                               QwtArray<float>& yCo,
-                               float& xMax, float& yMax,
-                               QwtArray<float>& x,
-                               QwtArray<float>& y);
-
     QString getComboString();
-    QString getTabTitle();
 
-    void calculateNumberOfBins();
-    int calculateNumberOfBins(float mu, float sigma, float minCutOff, float maxCutOff, float stepSize);
-    int gatherSizeDistributionFromGui(float& mu, float& sigma, float& minCutOff, float& maxCutOff, float& stepSize);
 
     int gatherStatsData(AttributeMatrix::Pointer attrMat, bool preflight = false);
-
-    void addTreeWidgetItems(QTreeWidget* treeWidget);
+    virtual QIcon getPhaseIcon();
 
   public slots:
 
   protected slots:
     void on_m_GenerateDefaultData_clicked();
-    void on_m_Mu_SizeDistribution_textChanged(const QString& text);
-    void on_m_Sigma_SizeDistribution_textChanged(const QString& text);
-    void on_m_MinSigmaCutOff_textChanged(const QString& text);
-    void on_m_MaxSigmaCutOff_textChanged(const QString& text);
-    void on_m_BinStepSize_valueChanged(double v);
+    void on_m_FeatureSizeDistBtn_toggled();
+    void on_m_OdfBtn_toggled();
+    void on_m_AxisOdfBtn_toggled();
 
     void on_microstructurePresetCombo_currentIndexChanged(int index);
 
     void dataWasEdited();
+
     void bulkLoadEvent(bool fail);
 
   protected:
@@ -112,41 +95,19 @@ class PrimaryPhaseWidget : public SGWidget, private Ui::PrimaryPhaseWidget
       */
     void setWidgetListEnabled(bool b);
 
+    /**
+     * @brief setupGui
+     */
     void setupGui();
 
-    /**
-      * @brief Enables or disables the various PlotWidgetTabs
-      * @param b Enable or disable the plotwidgets
-      */
-    void setTabsPlotTabsEnabled(bool b);
-
-    /**
-     * @brief validateValue
-     * @param val
-     * @param lineEdit
-     * @return
-     */
-    bool validateValue(QDoubleValidator* val, QLineEdit* lineEdit);
-
-    /**
-     * @brief validateMuSigma
-     * @return
-     */
-    bool validateMuSigma();
 
   private:
-    int                  m_PhaseIndex;
-    unsigned int  m_CrystalStructure;
+    int m_PhaseIndex;
+    unsigned int m_CrystalStructure;
 
     QList<QWidget*>      m_WidgetList;
-    QwtPlotCurve*        m_SizeDistributionCurve;
-    QwtPlotMarker*       m_CutOffMin;
-    QwtPlotMarker*       m_CutOffMax;
-    QwtPlotGrid*         m_grid;
-    AbstractMicrostructurePreset::Pointer m_MicroPreset;
 
-    QDoubleValidator* m_MuValidator;
-    QDoubleValidator* m_SigmaValidator;
+    AbstractMicrostructurePreset::Pointer m_MicroPreset;
 
     StatsGenPlotWidget* m_Omega3Plot;
     StatsGenPlotWidget* m_BOverAPlot;

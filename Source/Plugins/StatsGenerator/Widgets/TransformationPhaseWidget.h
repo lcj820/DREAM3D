@@ -100,6 +100,9 @@ class TransformationPhaseWidget : public SGWidget, private Ui::TransformationPha
 
     int gatherStatsData(AttributeMatrix::Pointer attrMat, bool preflight = false);
 
+    virtual QIcon getPhaseIcon();
+
+
   protected slots:
     void on_m_GenerateDefaultData_clicked();
     void on_m_Mu_SizeDistribution_textChanged(const QString& text);

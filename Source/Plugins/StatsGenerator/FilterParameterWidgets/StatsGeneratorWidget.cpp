@@ -48,7 +48,6 @@
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QFileDialog>
 #include <QtGui/QDesktopServices>
-#include <QtWidgets/QProgressDialog>
 
 
 #include "H5Support/H5Utilities.h"
@@ -87,6 +86,7 @@
 StatsGeneratorWidget::StatsGeneratorWidget(FilterParameter* parameter, AbstractFilter* filter, QWidget* parent) :
   FilterParameterWidget(parameter, filter, parent)
 {
+  setWidgetIsExpanding(true);
   m_FilterParameter = dynamic_cast<StatsGeneratorFilterParameter*>(parameter);
   Q_ASSERT_X(m_FilterParameter != NULL, "NULL Pointer", "StatsGeneratorFilterWidget can ONLY be used with an StatsGeneratorFilterParameter object");
 
@@ -108,10 +108,16 @@ StatsGeneratorWidget::~StatsGeneratorWidget()
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
+QPushButton* StatsGeneratorWidget::createPhaseButton(const QString& label, const QString &icon)
+{
+  return nullptr;
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
 void StatsGeneratorWidget::setupGui()
 {
-  phaseTabs = new QTabWidget(nullptr);
-
   // Hide the debugging buttons
   updatePipelineBtn->hide();
   saveH5Btn->hide();
@@ -130,31 +136,30 @@ void StatsGeneratorWidget::setupGui()
   connect(getFilter(), SIGNAL(updateFilterParameters(AbstractFilter*)),
           this, SLOT(filterNeedsInputParameters(AbstractFilter*)));
 
-  phaseTabs->clear();
+  QWidget* w = m_ContentStackedWidget->currentWidget();
+  m_ContentStackedWidget->removeWidget(w);
+
+  connect(m_ToolGrid, SIGNAL(currentSelectionChanged(int)),
+          m_ContentStackedWidget, SLOT(setCurrentIndex(int)));
 
   StatsDataArray::Pointer sda = m_Filter->getStatsDataArray();
   if( (sda && sda->getNumberOfTuples() == 0) || !sda)
   {
-    PrimaryPhaseWidget* ppw = new PrimaryPhaseWidget(nullptr);
-    ppw->setPhaseIndex(1);
-    ppw->setPhaseType(SIMPL::PhaseType::PrimaryPhase);
-    ppw->setCrystalStructure(Ebsd::CrystalStructure::Cubic_High);
-    ppw->setPhaseFraction(1.0);
-    ppw->setTotalPhaseFraction(1.0);
- //   phaseTabs->addTab(ppw, "Primary Phase");
+    PrimaryPhaseWidget* w = new PrimaryPhaseWidget();
+    QIcon icon = w->getPhaseIcon();
+    QAction* action = new QAction( icon, QString("Primary"), this);
+    m_ToolGrid->insertActionButton(m_ToolGrid->count(), icon, action);
+    m_ContentStackedWidget->addWidget(w);
 
-    connect(ppw, SIGNAL(phaseParametersChanged()),
+    connect(w, SIGNAL(phaseParametersChanged()),
             this, SIGNAL(parametersChanged()));
 
-    ppw->addTreeWidgetItems(m_PhaseTreeWidget);
-    ppw->setPhaseName("Primary Phase-1");
-
-    QLayoutItem* layoutItem = contentFrameLayout->takeAt(0);
-    if(layoutItem)
-    {
-      layoutItem->widget()->setParent(nullptr);
-    }
-    contentFrameLayout->addWidget(ppw);
+    w->setPhaseIndex(1);
+    w->setPhaseType(SIMPL::PhaseType::PrimaryPhase);
+    w->setCrystalStructure(Ebsd::CrystalStructure::Cubic_High);
+    w->setPhaseFraction(1.0);
+    w->setTotalPhaseFraction(1.0);
+    w->setPhaseName("Primary-0");
   }
   else
   {
@@ -165,11 +170,15 @@ void StatsGeneratorWidget::setupGui()
     QVector<size_t> tDims(1, ensembles);
     AttributeMatrix::Pointer cellEnsembleAttrMat = AttributeMatrix::New(tDims, SIMPL::Defaults::CellEnsembleAttributeMatrixName, SIMPL::AttributeMatrixType::CellEnsemble);
     cellEnsembleAttrMat->addAttributeArray(sda->getName(), sda);
-    UInt32ArrayType::Pointer phaseTypes = m_Filter->getPhaseTypes();
-    cellEnsembleAttrMat->addAttributeArray(phaseTypes->getName(), phaseTypes);
+    UInt32ArrayType::Pointer phaseTypesPtr = m_Filter->getPhaseTypes();
+    cellEnsembleAttrMat->addAttributeArray(phaseTypesPtr->getName(), phaseTypesPtr);
     UInt32ArrayType::Pointer crystalStructures = m_Filter->getCrystalStructures();
     cellEnsembleAttrMat->addAttributeArray(crystalStructures->getName(), crystalStructures);
+    unsigned int* phaseTypes = phaseTypesPtr->getPointer(0);
 
+
+    // We should iterate on all the phases here to start setting data and creating
+    // all of the StatsGenPhase Objects
     for (size_t phase = 1; phase < ensembles; ++phase)
     {
       progress.setValue(phase);
@@ -178,54 +187,78 @@ void StatsGeneratorWidget::setupGui()
       {
         return;
       }
-      StatsData::Pointer statsData = sda->getStatsData(phase);
+       addNewPhase(progress, phaseTypes, phase, cellEnsembleAttrMat);
 
-      if(phaseTypes->getValue(phase) == SIMPL::PhaseType::BoundaryPhase)
-      {
-        progress.setLabelText("Opening Boundaray Phase...");
-        BoundaryPhaseWidget* w = new BoundaryPhaseWidget(this);
-        phaseTabs->addTab(w, w->getTabTitle());
-        w->extractStatsData(cellEnsembleAttrMat, static_cast<int>(phase));
-      }
-      else if(phaseTypes->getValue(phase) == SIMPL::PhaseType::MatrixPhase)
-      {
-        progress.setLabelText("Opening Matrix Phase...");
-        MatrixPhaseWidget* w = new MatrixPhaseWidget(this);
-        phaseTabs->addTab(w, w->getTabTitle());
-        w->extractStatsData(cellEnsembleAttrMat, static_cast<int>(phase));
-      }
-      if(phaseTypes->getValue(phase) == SIMPL::PhaseType::PrecipitatePhase)
-      {
-        progress.setLabelText("Opening Precipitate Phase...");
-        PrecipitatePhaseWidget* w = new PrecipitatePhaseWidget(this);
-        phaseTabs->addTab(w, w->getTabTitle());
-        w->extractStatsData(cellEnsembleAttrMat, static_cast<int>(phase));
-      }
-      if(phaseTypes->getValue(phase) == SIMPL::PhaseType::PrimaryPhase)
-      {
-        progress.setLabelText("Opening Primary Phase...");
-        PrimaryPhaseWidget* w = new PrimaryPhaseWidget(this);
-        phaseTabs->addTab(w, w->getTabTitle());
-        w->extractStatsData(cellEnsembleAttrMat, static_cast<int>(phase));
-      }
-      if(phaseTypes->getValue(phase) == SIMPL::PhaseType::TransformationPhase)
-      {
-        progress.setLabelText("Opening Transformation Phase...");
-        TransformationPhaseWidget* w = new TransformationPhaseWidget(this);
-        phaseTabs->addTab(w, w->getTabTitle());
-        w->extractStatsData(cellEnsembleAttrMat, static_cast<int>(phase));
-      }
-      else
-      {
-
-      }
     }
     progress.setValue(ensembles);
 
     // Now delete the first Phase from the Combo which was left over from something else
-    phaseTabs->setCurrentIndex(0);
   }
 }
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void StatsGeneratorWidget::addNewPhase(QProgressDialog &progress, uint32_t* phaseTypes, int phase, AttributeMatrix::Pointer cellEnsembleAttrMat)
+{
+  if(phaseTypes[phase] == SIMPL::PhaseType::BoundaryPhase)
+  {
+    progress.setLabelText("Opening Boundaray Phase...");
+    BoundaryPhaseWidget* w = new BoundaryPhaseWidget(this);
+    QIcon icon = w->getPhaseIcon();
+    QAction* action = new QAction( icon, QString("Boundary"), this);
+    m_ToolGrid->insertActionButton(m_ToolGrid->count(), icon, action);
+    m_ContentStackedWidget->addWidget(w);
+    if(cellEnsembleAttrMat.get()) { w->extractStatsData(cellEnsembleAttrMat, static_cast<int>(phase));}
+  }
+  else if(phaseTypes[phase] == SIMPL::PhaseType::MatrixPhase)
+  {
+    progress.setLabelText("Opening Matrix Phase...");
+    MatrixPhaseWidget* w = new MatrixPhaseWidget(this);
+    QIcon icon = w->getPhaseIcon();
+    QAction* action = new QAction( icon, QString("Matrix"), this);
+    m_ToolGrid->insertActionButton(m_ToolGrid->count(), icon, action);
+    m_ContentStackedWidget->addWidget(w);
+    if(cellEnsembleAttrMat.get()) { w->extractStatsData(cellEnsembleAttrMat, static_cast<int>(phase));}
+  }
+  else if(phaseTypes[phase] == SIMPL::PhaseType::PrecipitatePhase)
+  {
+    progress.setLabelText("Opening Precipitate Phase...");
+    PrecipitatePhaseWidget* w = new PrecipitatePhaseWidget(this);
+    QIcon icon = w->getPhaseIcon();
+    QAction* action = new QAction( icon, QString("Precipitate"), this);
+    m_ToolGrid->insertActionButton(m_ToolGrid->count(), icon, action);
+    m_ContentStackedWidget->addWidget(w);
+    if(cellEnsembleAttrMat.get()) { w->extractStatsData(cellEnsembleAttrMat, static_cast<int>(phase));}
+  }
+  else if(phaseTypes[phase] == SIMPL::PhaseType::PrimaryPhase)
+  {
+    progress.setLabelText("Opening Primary Phase...");
+    PrimaryPhaseWidget* w = new PrimaryPhaseWidget(this);
+    w->setPhaseName(QString("Primary %1").arg(phase));
+    QIcon icon = w->getPhaseIcon();
+    QAction* action = new QAction( icon, QString("Primary"), this);
+    m_ToolGrid->insertActionButton(m_ToolGrid->count(), icon, action);
+    m_ContentStackedWidget->addWidget(w);
+    if(cellEnsembleAttrMat.get()) { w->extractStatsData(cellEnsembleAttrMat, static_cast<int>(phase));}
+  }
+  else if(phaseTypes[phase] == SIMPL::PhaseType::TransformationPhase)
+  {
+    progress.setLabelText("Opening Transformation Phase...");
+    TransformationPhaseWidget* w = new TransformationPhaseWidget(this);
+    QIcon icon = w->getPhaseIcon();
+    QAction* action = new QAction( icon, QString("Transformation"), this);
+    m_ToolGrid->insertActionButton(m_ToolGrid->count(), icon, action);
+    m_ContentStackedWidget->addWidget(w);
+    if(cellEnsembleAttrMat.get()) { w->extractStatsData(cellEnsembleAttrMat, static_cast<int>(phase));}
+  }
+  else
+  {
+
+  }
+}
+
+
 
 // -----------------------------------------------------------------------------
 //
@@ -235,6 +268,7 @@ void StatsGeneratorWidget::on_updatePipelineBtn_clicked()
   emit parametersChanged();
 }
 
+#if 0
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
@@ -257,6 +291,7 @@ void StatsGeneratorWidget::on_m_PhaseTreeWidget_itemClicked(QTreeWidgetItem *ite
     contentFrameLayout->addWidget(w);
   }
 }
+#endif
 
 // -----------------------------------------------------------------------------
 //
@@ -291,9 +326,9 @@ void StatsGeneratorWidget::filterNeedsInputParameters(AbstractFilter* filter)
 // -----------------------------------------------------------------------------
 void StatsGeneratorWidget::beforePreflight()
 {
- for (int i = 0; i < phaseTabs->count(); i++)
+ for (int i = 0; i < m_ContentStackedWidget->count(); i++)
  {
-   SGWidget* sgwidget = qobject_cast<SGWidget*>(phaseTabs->widget(i));
+   SGWidget* sgwidget = qobject_cast<SGWidget*>(m_ContentStackedWidget->widget(i));
    if (!qobject_cast<MatrixPhaseWidget*>(sgwidget) &&
        !qobject_cast<BoundaryPhaseWidget*>(sgwidget) &&
        !qobject_cast<TransformationPhaseWidget*>(sgwidget))
@@ -329,7 +364,7 @@ void StatsGeneratorWidget::afterPreflight()
 void StatsGeneratorWidget::on_addPhase_clicked()
 {
   // Ensure the Current SGWidget has generated its data first:
-  SGWidget* sgwidget = qobject_cast<SGWidget*>(phaseTabs->currentWidget());
+  SGWidget* sgwidget = qobject_cast<SGWidget*>(m_ContentStackedWidget->currentWidget());
   if (sgwidget && false == sgwidget->getDataHasBeenGenerated())
   {
     int r = QMessageBox::warning(this, tr("StatsGenerator"),
@@ -345,12 +380,10 @@ void StatsGeneratorWidget::on_addPhase_clicked()
       return;
     }
   }
-
-
   double phaseFractionTotal = 0.0;
-  for(int p = 0; p < phaseTabs->count(); ++p)
+  for(int p = 0; p < m_ContentStackedWidget->count(); ++p)
   {
-    SGWidget* sgwidget = qobject_cast<SGWidget*>(phaseTabs->widget(p));
+    SGWidget* sgwidget = qobject_cast<SGWidget*>(m_ContentStackedWidget->widget(p));
     phaseFractionTotal += sgwidget->getPhaseFraction();
   }
   QString phaseName;
@@ -362,148 +395,134 @@ void StatsGeneratorWidget::on_addPhase_clicked()
   int r = dialog.exec();
   if (r == QDialog::Accepted)
   {
-    if(dialog.getPhaseType() == SIMPL::PhaseType::PrimaryPhase)
+    if(dialog.getPhaseType() == SIMPL::PhaseType::BoundaryPhase)
     {
-      PrimaryPhaseWidget* ppw = new PrimaryPhaseWidget();
-      //phaseTabs->addTab(ppw, "Primary");
+      BoundaryPhaseWidget* w = new BoundaryPhaseWidget();
+      QIcon icon = w->getPhaseIcon();
+      QAction* action = new QAction( icon, QString("Boundary"), this);
+      m_ToolGrid->insertActionButton(m_ToolGrid->count(), icon, action);
 
-      connect(ppw, SIGNAL(phaseParametersChanged()),
+      connect(w, SIGNAL(phaseParametersChanged()),
               this, SIGNAL(parametersChanged()));
 
-      ppw->setPhaseIndex(phaseTabs->count());
-      ppw->setPhaseType(SIMPL::PhaseType::PrimaryPhase);
-      ppw->setCrystalStructure(dialog.getCrystalStructure());
-      ppw->setPhaseFraction(dialog.getPhaseFraction());
-      ppw->setPhaseType(dialog.getPhaseType());
-      QString cName = ppw->getComboString();
-      ppw->setObjectName(cName);
-      ppw->updatePlots();
+      w->setPhaseIndex(m_ContentStackedWidget->count());
+      w->setPhaseType(SIMPL::PhaseType::BoundaryPhase);
+      w->setCrystalStructure(dialog.getCrystalStructure());
+      w->setPhaseFraction(dialog.getPhaseFraction());
+      w->setPhaseType(dialog.getPhaseType());
+      QString cName = w->getComboString();
+      w->setObjectName(cName);
       setWindowModified(true);
-      out << "Primary Phase" << "-" << phaseTabs->count();
-      ppw->addTreeWidgetItems(m_PhaseTreeWidget);
-      ppw->setPhaseName(phaseName);
-      QLayoutItem* layoutItem = contentFrameLayout->takeAt(0);
-      if(layoutItem)
-      {
-        layoutItem->widget()->setParent(nullptr);
-      }
-      contentFrameLayout->addWidget(ppw);
-    }
-    else if(dialog.getPhaseType() == SIMPL::PhaseType::PrecipitatePhase)
-    {
-      PrecipitatePhaseWidget* ppw = new PrecipitatePhaseWidget();
-      phaseTabs->addTab(ppw, "Precipitate");
+      out << "Boundary " << m_ContentStackedWidget->count();
 
-      connect(ppw, SIGNAL(phaseParametersChanged()),
-              this, SIGNAL(parametersChanged()));
+      m_ContentStackedWidget->addWidget(w);
 
-      ppw->setPhaseIndex(phaseTabs->count());
-      ppw->setPhaseType(SIMPL::PhaseType::PrecipitatePhase);
-      ppw->setCrystalStructure(dialog.getCrystalStructure());
-      ppw->setPhaseFraction(dialog.getPhaseFraction());
-      ppw->setPhaseType(dialog.getPhaseType());
-      ppw->setPptFraction(dialog.getPptFraction());
-      QString cName = ppw->getComboString();
-      ppw->setObjectName(cName);
-      ppw->updatePlots();
-      setWindowModified(true);
-      out << "Precipitate Phase" << "-" << phaseTabs->count();
-
-    }
-    else if(dialog.getPhaseType() == SIMPL::PhaseType::TransformationPhase)
-    {
-      TransformationPhaseWidget* tpw = new TransformationPhaseWidget();
-      phaseTabs->addTab(tpw, "Transformation");
-
-      connect(tpw, SIGNAL(phaseParametersChanged()),
-              this, SIGNAL(parametersChanged()));
-
-      tpw->setPhaseIndex(phaseTabs->count());
-      tpw->setPhaseType(SIMPL::PhaseType::TransformationPhase);
-      tpw->setCrystalStructure(dialog.getCrystalStructure());
-      tpw->setPhaseFraction(dialog.getPhaseFraction());
-      tpw->setPhaseType(dialog.getPhaseType());
-      tpw->setParentPhase(dialog.getParentPhase());
-      QString cName = tpw->getComboString();
-      tpw->setObjectName(cName);
-      tpw->updatePlots();
-      setWindowModified(true);
-      out << "Transformation Phase" << "-" << phaseTabs->count();
 
     }
     else if(dialog.getPhaseType() == SIMPL::PhaseType::MatrixPhase)
     {
-      MatrixPhaseWidget* mpw = new MatrixPhaseWidget();
-      phaseTabs->addTab(mpw, "Matrix");
+      MatrixPhaseWidget* w = new MatrixPhaseWidget();
+      QIcon icon = w->getPhaseIcon();
+      QAction* action = new QAction( icon, QString("Matrix"), this);
+      m_ToolGrid->insertActionButton(m_ToolGrid->count(), icon, action);
 
-      connect(mpw, SIGNAL(phaseParametersChanged()),
+      connect(w, SIGNAL(phaseParametersChanged()),
               this, SIGNAL(parametersChanged()));
 
-      mpw->setPhaseIndex(phaseTabs->count());
-      mpw->setPhaseType(SIMPL::PhaseType::MatrixPhase);
-      mpw->setCrystalStructure(dialog.getCrystalStructure());
-      mpw->setPhaseFraction(dialog.getPhaseFraction());
-      mpw->setPhaseType(dialog.getPhaseType());
-      QString cName = mpw->getComboString();
-      mpw->setObjectName(cName);
+      w->setPhaseIndex(m_ContentStackedWidget->count());
+      w->setPhaseType(SIMPL::PhaseType::MatrixPhase);
+      w->setCrystalStructure(dialog.getCrystalStructure());
+      w->setPhaseFraction(dialog.getPhaseFraction());
+      w->setPhaseType(dialog.getPhaseType());
+      QString cName = w->getComboString();
+      w->setObjectName(cName);
       setWindowModified(true);
-      out << "Matrix Phase" << "-" << phaseTabs->count();
+      out << "Matrix " << m_ContentStackedWidget->count();
+
+      m_ContentStackedWidget->addWidget(w);
 
     }
-    else if(dialog.getPhaseType() == SIMPL::PhaseType::BoundaryPhase)
+    else if(dialog.getPhaseType() == SIMPL::PhaseType::PrecipitatePhase)
     {
-      BoundaryPhaseWidget* bpw = new BoundaryPhaseWidget();
-      phaseTabs->addTab(bpw, "Boundary");
+      PrecipitatePhaseWidget* w = new PrecipitatePhaseWidget();
+      QIcon icon = w->getPhaseIcon();
+      QAction* action = new QAction( icon, QString("Precipitate"), this);
+      m_ToolGrid->insertActionButton(m_ToolGrid->count(), icon, action);
 
-      connect(bpw, SIGNAL(phaseParametersChanged()),
+      connect(w, SIGNAL(phaseParametersChanged()),
               this, SIGNAL(parametersChanged()));
 
-      bpw->setPhaseIndex(phaseTabs->count());
-      bpw->setPhaseType(SIMPL::PhaseType::BoundaryPhase);
-      bpw->setCrystalStructure(dialog.getCrystalStructure());
-      bpw->setPhaseFraction(dialog.getPhaseFraction());
-      bpw->setPhaseType(dialog.getPhaseType());
-      QString cName = bpw->getComboString();
-      bpw->setObjectName(cName);
+      w->setPhaseIndex(m_ContentStackedWidget->count());
+      w->setPhaseType(SIMPL::PhaseType::PrecipitatePhase);
+      w->setCrystalStructure(dialog.getCrystalStructure());
+      w->setPhaseFraction(dialog.getPhaseFraction());
+      w->setPhaseType(dialog.getPhaseType());
+      w->setPptFraction(dialog.getPptFraction());
+      QString cName = w->getComboString();
+      w->setObjectName(cName);
+      w->updatePlots();
       setWindowModified(true);
-      out << "Boundary Phase" << "-" << phaseTabs->count();
+      out << "Precip. " << m_ContentStackedWidget->count();
+
+      m_ContentStackedWidget->addWidget(w);
 
     }
+    else if(dialog.getPhaseType() == SIMPL::PhaseType::PrimaryPhase)
+    {
+      PrimaryPhaseWidget* w = new PrimaryPhaseWidget();
+      QIcon icon = w->getPhaseIcon();
+      QAction* action = new QAction( icon, QString("Primary"), this);
+      m_ToolGrid->insertActionButton(m_ToolGrid->count(), icon, action);
+
+      connect(w, SIGNAL(phaseParametersChanged()),
+              this, SIGNAL(parametersChanged()));
+
+      w->setPhaseIndex(m_ContentStackedWidget->count());
+      w->setPhaseType(SIMPL::PhaseType::PrimaryPhase);
+      w->setCrystalStructure(dialog.getCrystalStructure());
+      w->setPhaseFraction(dialog.getPhaseFraction());
+      w->setPhaseType(dialog.getPhaseType());
+      QString cName = w->getComboString();
+      w->setObjectName(cName);
+      w->updatePlots();
+      setWindowModified(true);
+      out << "Primary " << m_ContentStackedWidget->count();
+      w->setPhaseName(phaseName);
+      m_ContentStackedWidget->addWidget(w);
+    }
+    else if(dialog.getPhaseType() == SIMPL::PhaseType::TransformationPhase)
+    {
+      TransformationPhaseWidget* w = new TransformationPhaseWidget();
+      QIcon icon = w->getPhaseIcon();
+      QAction* action = new QAction( icon, QString("Transformation"), this);
+      m_ToolGrid->insertActionButton(m_ToolGrid->count(), icon, action);
+
+      connect(w, SIGNAL(phaseParametersChanged()),
+              this, SIGNAL(parametersChanged()));
+
+      w->setPhaseIndex(m_ContentStackedWidget->count());
+      w->setPhaseType(SIMPL::PhaseType::TransformationPhase);
+      w->setCrystalStructure(dialog.getCrystalStructure());
+      w->setPhaseFraction(dialog.getPhaseFraction());
+      w->setPhaseType(dialog.getPhaseType());
+      w->setParentPhase(dialog.getParentPhase());
+      QString cName = w->getComboString();
+      w->setObjectName(cName);
+      w->updatePlots();
+      setWindowModified(true);
+      out << "Trans. " << m_ContentStackedWidget->count();
+      m_ContentStackedWidget->addWidget(w);
+    }
+
+    else
 
     //insertTreeViewPhase(phaseName);
     // Make sure the new tab is the active tab
-    phaseTabs->setCurrentIndex(phaseTabs->count() - 1);
+    m_ContentStackedWidget->setCurrentIndex(m_ContentStackedWidget->count() - 1);
   }
   emit parametersChanged();
 }
 
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-void StatsGeneratorWidget::insertTreeViewPhase(QString phaseName)
-{
-
-  QTreeWidgetItem* widgetItem = new QTreeWidgetItem(m_PhaseTreeWidget);
-  widgetItem->setText(0, phaseName);
-
-  QTreeWidgetItem* sizeDistItem = new QTreeWidgetItem(widgetItem);
-  sizeDistItem->setText(0, "Size Distribution");
-
-  QTreeWidgetItem* omega3DistItem = new QTreeWidgetItem(widgetItem);
-  omega3DistItem->setText(0, "Omega3 Distribution");
-
-  QTreeWidgetItem* shapeItem = new QTreeWidgetItem(widgetItem);
-  shapeItem->setText(0, "Shape Distribution");
-
-  QTreeWidgetItem* neighborItem = new QTreeWidgetItem(widgetItem);
-  neighborItem->setText(0, "Neighbor Distribution");
-
-  QTreeWidgetItem* mdfItem = new QTreeWidgetItem(widgetItem);
-  mdfItem->setText(0, "ODF & MDF");
-
-  QTreeWidgetItem* axisOdfItem = new QTreeWidgetItem(widgetItem);
-  axisOdfItem->setText(0, "Axis ODF");
-}
 
 // -----------------------------------------------------------------------------
 //
@@ -514,11 +533,11 @@ void StatsGeneratorWidget::on_editPhase_clicked()
   EditPhaseDialog dialog;
   dialog.setEditFlag(false);
 
-  SGWidget* sgwidget = qobject_cast<SGWidget*>(phaseTabs->currentWidget());
+  SGWidget* sgwidget = qobject_cast<SGWidget*>(m_ContentStackedWidget->currentWidget());
 
-  for (int p = 0; p < phaseTabs->count(); ++p)
+  for (int p = 0; p < m_ContentStackedWidget->count(); ++p)
   {
-    SGWidget* currentWidget = qobject_cast<SGWidget*>(phaseTabs->widget(p));
+    SGWidget* currentWidget = qobject_cast<SGWidget*>(m_ContentStackedWidget->widget(p));
     if(sgwidget != currentWidget )
     {
       phaseFractionTotal += currentWidget->getPhaseFraction();
@@ -611,22 +630,23 @@ void StatsGeneratorWidget::on_editPhase_clicked()
 
 }
 
+#if 0
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
 void StatsGeneratorWidget::on_phaseTabs_tabCloseRequested ( int index )
 {
-  if(phaseTabs->count() > 1)
+  if(m_ContentStackedWidget->count() > 1)
   {
     // Remove the SGPhase object from the vector
-    SGWidget* currentWidget = qobject_cast<SGWidget*>(phaseTabs->widget(index));
-    phaseTabs->removeTab(index);
+    SGWidget* currentWidget = qobject_cast<SGWidget*>(m_ContentStackedWidget->widget(index));
+    m_ContentStackedWidget->removeTab(index);
     currentWidget->deleteLater(); // Actually delete it
 
     // Reset the phase index for each SGPhase object
-    for (int p = 0; p < phaseTabs->count(); ++p)
+    for (int p = 0; p < m_ContentStackedWidget->count(); ++p)
     {
-      SGWidget* sgwidget = qobject_cast<SGWidget*>(phaseTabs->widget(p));
+      SGWidget* sgwidget = qobject_cast<SGWidget*>(m_ContentStackedWidget->widget(p));
       sgwidget->setPhaseIndex(p + 1);
       sgwidget->setObjectName(sgwidget->getComboString());
     }
@@ -645,13 +665,14 @@ void StatsGeneratorWidget::on_phaseTabs_tabCloseRequested ( int index )
   setWindowModified(true);
   emit parametersChanged();
 }
+#endif
 
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
 void StatsGeneratorWidget::on_deletePhase_clicked()
 {
-  on_phaseTabs_tabCloseRequested(phaseTabs->currentIndex());
+  //on_phaseTabs_tabCloseRequested(m_ContentStackedWidget->currentIndex());
 }
 
 // -----------------------------------------------------------------------------
@@ -707,7 +728,7 @@ void StatsGeneratorWidget::on_actionSaveAs_triggered()
 DataContainerArray::Pointer StatsGeneratorWidget::generateDataContainerArray()
 {
   int err = 0;
-  int nPhases = phaseTabs->count() + 1;
+  int nPhases = m_ContentStackedWidget->count() + 1;
   DataContainerArray::Pointer dca = DataContainerArray::New();
   DataContainer::Pointer m = DataContainer::New(SIMPL::Defaults::StatsGenerator);
   dca->addDataContainer(m);
@@ -730,16 +751,16 @@ DataContainerArray::Pointer StatsGeneratorWidget::generateDataContainerArray()
   cellEnsembleAttrMat->addAttributeArray(SIMPL::EnsembleData::PhaseTypes, phaseTypes);
 
   double phaseFractionTotal = 0.0;
-  for(int p = 0; p < phaseTabs->count(); ++p)
+  for(int p = 0; p < m_ContentStackedWidget->count(); ++p)
   {
-    SGWidget* sgwidget = qobject_cast<SGWidget*>(phaseTabs->widget(p));
+    SGWidget* sgwidget = qobject_cast<SGWidget*>(m_ContentStackedWidget->widget(p));
     phaseFractionTotal += sgwidget->getPhaseFraction();
   }
 
   // Loop on all the phases
-  for (int i = 0; i < phaseTabs->count(); ++i)
+  for (int i = 0; i < m_ContentStackedWidget->count(); ++i)
   {
-    SGWidget* sgwidget = qobject_cast<SGWidget*>(phaseTabs->widget(i));
+    SGWidget* sgwidget = qobject_cast<SGWidget*>(m_ContentStackedWidget->widget(i));
     sgwidget->setTotalPhaseFraction(static_cast<float>(phaseFractionTotal));
     if (sgwidget->getPhaseType() == SIMPL::PhaseType::PrimaryPhase)
     {
@@ -891,7 +912,13 @@ void StatsGeneratorWidget::on_openStatsFile_clicked()
   m_OpenDialogLastDirectory = fi.path();
 
   // Delete any existing phases from the GUI
-  phaseTabs->clear();
+  QWidget* w = m_ContentStackedWidget->widget(0);
+  while(w)
+  {
+    m_ContentStackedWidget->removeWidget(w);
+    w = m_ContentStackedWidget->widget(0);
+  }
+  m_ToolGrid->clear();
 
   DataContainerArray::Pointer dca = DataContainerArray::New();
   DataContainer::Pointer m = DataContainer::New(SIMPL::Defaults::StatsGenerator);
@@ -965,50 +992,13 @@ void StatsGeneratorWidget::on_openStatsFile_clicked()
       return;
     }
 
-    if(phaseTypes[phase] == SIMPL::PhaseType::BoundaryPhase)
-    {
-      progress.setLabelText("Opening Boundaray Phase...");
-      BoundaryPhaseWidget* w = new BoundaryPhaseWidget(this);
-      phaseTabs->addTab(w, w->getTabTitle());
-      w->extractStatsData(cellEnsembleAttrMat, static_cast<int>(phase));
-    }
-    else if(phaseTypes[phase] == SIMPL::PhaseType::MatrixPhase)
-    {
-      progress.setLabelText("Opening Matrix Phase...");
-      MatrixPhaseWidget* w = new MatrixPhaseWidget(this);
-      phaseTabs->addTab(w, w->getTabTitle());
-      w->extractStatsData(cellEnsembleAttrMat, static_cast<int>(phase));
-    }
-    if(phaseTypes[phase] == SIMPL::PhaseType::PrecipitatePhase)
-    {
-      progress.setLabelText("Opening Precipitate Phase...");
-      PrecipitatePhaseWidget* w = new PrecipitatePhaseWidget(this);
-      phaseTabs->addTab(w, w->getTabTitle());
-      w->extractStatsData(cellEnsembleAttrMat, static_cast<int>(phase));
-    }
-    if(phaseTypes[phase] == SIMPL::PhaseType::PrimaryPhase)
-    {
-      progress.setLabelText("Opening Primary Phase...");
-      PrimaryPhaseWidget* w = new PrimaryPhaseWidget(this);
-      phaseTabs->addTab(w, w->getTabTitle());
-      w->extractStatsData(cellEnsembleAttrMat, static_cast<int>(phase));
-    }
-    if(phaseTypes[phase] == SIMPL::PhaseType::TransformationPhase)
-    {
-      progress.setLabelText("Opening Transformation Phase...");
-      TransformationPhaseWidget* w = new TransformationPhaseWidget(this);
-      phaseTabs->addTab(w, w->getTabTitle());
-      w->extractStatsData(cellEnsembleAttrMat, static_cast<int>(phase));
-    }
-    else
-    {
+    addNewPhase(progress, phaseTypes, phase, cellEnsembleAttrMat);
 
-    }
   }
   progress.setValue(ensembles);
 
   // Now delete the first Phase from the Combo which was left over from something else
-  phaseTabs->setCurrentIndex(0);
+  m_ContentStackedWidget->setCurrentIndex(0);
 
   // Set the window title correctly
   setWindowModified(false);
