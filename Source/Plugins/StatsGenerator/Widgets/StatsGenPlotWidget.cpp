@@ -67,7 +67,8 @@
 #include <qwt_scale_widget.h>
 #include <qwt_plot_magnifier.h>
 #include <qwt_plot_panner.h>
-
+#include <qwt_plot_item.h>
+#include <qwt_text_label.h>
 
 #include "SIMPLib/Common/Constants.h"
 #include "SIMPLib/DataArrays/StatsDataArray.h"
@@ -76,7 +77,7 @@
 #include "StatsGenerator/Widgets/TableModels/SGBetaTableModel.h"
 #include "StatsGenerator/Widgets/TableModels/SGLogNormalTableModel.h"
 #include "StatsGenerator/Widgets/TableModels/SGPowerLawTableModel.h"
-
+#include "StatsGenerator/Widgets/Presets/AbstractMicrostructurePreset.h"
 
 #include "OrientationLib/Texture/StatsGen.hpp"
 
@@ -132,6 +133,19 @@ StatsGenPlotWidget::~StatsGenPlotWidget()
 void StatsGenPlotWidget::setStatisticsType(unsigned int distributionType)
 {
   m_StatsType = distributionType;
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void StatsGenPlotWidget::setPlotTitle(const QString &title)
+{
+  QwtText qwtTitle(title);
+  qwtTitle.setColor(Qt::white);
+ // qwtTitle.setRenderFlags(Qt::AlignHCenter | Qt::AlignTop);
+  //title.setFont(font);
+  m_PlotView->setTitle(qwtTitle);
+
 }
 
 // -----------------------------------------------------------------------------
@@ -364,13 +378,6 @@ void StatsGenPlotWidget::setDataTitle(const QString &title)
   m_TableViewWidget->setWindowTitle(dataWidgetTitle);
 }
 
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-void StatsGenPlotWidget::setPlotTitle(const QString &title)
-{
-  m_PlotView->setTitle(title);
-}
 
 // -----------------------------------------------------------------------------
 //
@@ -412,6 +419,7 @@ void StatsGenPlotWidget::initQwtPlot(QString xAxisName, QString yAxisName, QwtPl
   canvas->setAutoFillBackground( false );
   canvas->setFrameStyle( QFrame::NoFrame );
   canvas->setPalette(pal);
+
   plot->setCanvas( canvas );
 
 //  QwtPlotMagnifier* plotMag =  new QwtPlotMagnifier( canvas );
@@ -442,6 +450,7 @@ void StatsGenPlotWidget::initQwtPlot(QString xAxisName, QString yAxisName, QwtPl
   plot->setTitle(title);
 
   const int margin = 5;
+
   plot->setContentsMargins( margin, margin, margin, margin );
 
 
@@ -450,7 +459,7 @@ void StatsGenPlotWidget::initQwtPlot(QString xAxisName, QString yAxisName, QwtPl
   m_grid->enableYMin(true);
 #if (QWT_VERSION > 0x060000)
   m_grid->setMajorPen(QPen(Qt::gray, 0, Qt::SolidLine));
-  m_grid->setMinorPen(QPen(Qt::lightGray, 0, Qt::DotLine));
+  m_grid->setMinorPen(QPen(Qt::lightGray, 0, Qt::SolidLine));
 #else
   m_grid->setMajPen(QPen(Qt::gray, 0, Qt::SolidLine));
   m_grid->setMinPen(QPen(Qt::lightGray, 0, Qt::DotLine));
@@ -475,6 +484,7 @@ void StatsGenPlotWidget::showDataWindow(bool b)
 
 //  m_TableViewWidget->setGeometry(rect);
   m_TableViewWidget->setVisible(true);
+
 }
 
 // -----------------------------------------------------------------------------
@@ -521,16 +531,6 @@ void StatsGenPlotWidget::setupGui()
 
     m_TableViewWidget->setVisible(false);
 
-
-//  distributionTypeCombo->blockSignals(true);
-//  distributionTypeCombo->addItem(SIMPL::StringConstants::BetaDistribution.toLatin1().data());
-//  distributionTypeCombo->addItem(SIMPL::StringConstants::LogNormalDistribution.toLatin1().data());
-//  distributionTypeCombo->addItem(SIMPL::StringConstants::PowerLawDistribution.toLatin1().data());
-//  distributionTypeCombo->hide();
-//  distributionTypeCombo->blockSignals(false);
-
-
-
   // Setup the TableView and Table Models
   QHeaderView* headerView = new QHeaderView(Qt::Horizontal, m_TableView);
   headerView->sectionResizeMode(QHeaderView::Interactive);
@@ -538,10 +538,8 @@ void StatsGenPlotWidget::setupGui()
   headerView->show();
 
   // Setup the Qwt Plot Widget
-  //plot->setCanvasBackground(QColor(Qt::white));
-  //m_PlotView->canvas()->setFrameShape(QFrame::NoFrame);
-  initQwtPlot("", "", m_PlotView);
 
+  initQwtPlot("", "", m_PlotView);
 
   resetTableModel();
   if (NULL != m_TableModel)

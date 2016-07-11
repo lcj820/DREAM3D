@@ -160,7 +160,6 @@ void StatsGenFeatureSizeWidget::plotPointSelected(const QPointF& point)
 // -----------------------------------------------------------------------------
 void StatsGenFeatureSizeWidget::mousePressEvent(QMouseEvent *event)
 {
-  qDebug() << "mousePressedEvent";
 }
 
 // -----------------------------------------------------------------------------

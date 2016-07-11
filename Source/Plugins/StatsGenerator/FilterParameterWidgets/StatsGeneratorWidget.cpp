@@ -54,7 +54,6 @@
 #include "H5Support/H5Lite.h"
 #include "H5Support/HDF5ScopedFileSentinel.h"
 
-#include "SIMPLib/SIMPLibVersion.h"
 #include "SIMPLib/DataArrays/StatsDataArray.h"
 #include "SIMPLib/StatsData/PrimaryStatsData.h"
 #include "SIMPLib/StatsData/PrecipitateStatsData.h"
@@ -94,6 +93,7 @@ StatsGeneratorWidget::StatsGeneratorWidget(FilterParameter* parameter, AbstractF
   Q_ASSERT_X(m_Filter != NULL, "NULL Pointer", "StatsGeneratorFilterWidget can ONLY be used with an StatsGeneratorFilter filter");
 
   m_OpenDialogLastDirectory = QDir::homePath();
+  setWidgetIsExpanding(true);
   setupUi(this);
   setupGui();
 }

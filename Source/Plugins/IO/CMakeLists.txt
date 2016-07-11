@@ -15,6 +15,17 @@ if(NOT Qt5Core_FOUND)
     message(FATAL_ERROR "Qt 5 is Needed for plugin ${PLUGIN_NAME}Plugin.")
 endif()
 
+set(CMP_TOP_HEADER_FILE "${PLUGIN_NAME}Plugin.h")
+set(VERSION_HEADER_FILE_NAME "${PLUGIN_NAME}Version.h")
+set(VERSION_SOURCE_FILE_NAME "${PLUGIN_NAME}Version.cpp")
+set(${PLUGIN_NAME}_VERSION_MAJOR "${DREAM3DProj_VERSION_MAJOR}")
+set(${PLUGIN_NAME}_VERSION_MINOR "${DREAM3DProj_VERSION_MINOR}")
+
+cmpRevisionString( GENERATED_HEADER_FILE_PATH "${VERSION_HEADER_FILE_NAME}"
+                    GENERATED_SOURCE_FILE_PATH "${VERSION_SOURCE_FILE_NAME}"
+                    NAMESPACE "${PLUGIN_NAME}"
+                    PROJECT_NAME "${PLUGIN_NAME}"
+                    EXPORT_MACRO "")
 
 set(${PLUGIN_NAME}_Project_SRCS "")
 
@@ -34,12 +45,7 @@ file(APPEND ${RegisterKnownFiltersFile} "/* This file will be directly included 
 file(APPEND ${RegisterKnownFiltersFile} "#include \"${PLUGIN_NAME}Filters.h\"\n\n")
 file(APPEND ${RegisterKnownFiltersFile} "\nvoid ${PLUGIN_NAME}Plugin::registerFilters(FilterManager* fm)\n{\n")
 
-# --------------------------------------------------------------------
-# Generate a file with all of our MOC'ed sources and  headers
-set(FilterWidget_GEN_HDRS_File ${${PLUGIN_NAME}_BINARY_DIR}/FilterWidget_GEN_HDRS_File.cmake)
-set(FilterWidget_GEN_SRCS_File ${${PLUGIN_NAME}_BINARY_DIR}/FilterWidget_GEN_SRCS_File.cmake)
-file(WRITE ${FilterWidget_GEN_HDRS_File})
-file(WRITE ${FilterWidget_GEN_SRCS_File})
+
 
 set(Project_SRCS "")
 

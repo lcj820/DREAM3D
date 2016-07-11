@@ -1,6 +1,3 @@
-#--////////////////////////////////////////////////////////////////////////////
-#-- Your License or Copyright can go here
-#--////////////////////////////////////////////////////////////////////////////
 
 set(PLUGIN_NAME StatsGenerator)
 set(${PLUGIN_NAME}_VERSION "1.0")
@@ -8,6 +5,12 @@ set(${PLUGIN_NAME}_VERSION_MAJOR "1")
 set(${PLUGIN_NAME}_VERSION_MINOR "0")
 get_filename_component(${PLUGIN_NAME}_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}" ABSOLUTE)
 set(StatsGenerator_BINARY_DIR "${DREAM3DProj_BINARY_DIR}/Plugins/${PLUGIN_NAME}")
+
+
+# ------------------------------------------------------------------------------
+#  Qwt Section. Find Qwt and setup copy and install rules
+# ------------------------------------------------------------------------------
+include(${CMP_SOURCE_DIR}/ExtLib/QwtSupport.cmake)
 
 # --------------------------------------------------------------------
 # Look for Qt 5 as we need it for the plugin GUI to be generated
@@ -18,6 +21,8 @@ endif()
 set(CMP_TOP_HEADER_FILE "${PLUGIN_NAME}Plugin.h")
 set(VERSION_HEADER_FILE_NAME "${PLUGIN_NAME}Version.h")
 set(VERSION_SOURCE_FILE_NAME "${PLUGIN_NAME}Version.cpp")
+set(${PLUGIN_NAME}_VERSION_MAJOR "${DREAM3DProj_VERSION_MAJOR}")
+set(${PLUGIN_NAME}_VERSION_MINOR "${DREAM3DProj_VERSION_MINOR}")
 
 cmpRevisionString( GENERATED_HEADER_FILE_PATH "${VERSION_HEADER_FILE_NAME}"
                     GENERATED_SOURCE_FILE_PATH "${VERSION_SOURCE_FILE_NAME}"
@@ -44,12 +49,7 @@ file(APPEND ${RegisterKnownFiltersFile} "#include \"${PLUGIN_NAME}Filters.h\"\n\
 file(APPEND ${RegisterKnownFiltersFile} "\n//----------------------------------------------------------\n")
 file(APPEND ${RegisterKnownFiltersFile} "\nvoid ${PLUGIN_NAME}Plugin::registerFilters(FilterManager* fm)\n{\n")
 
-# --------------------------------------------------------------------
-# Generate a file with all of our MOC'ed sources and  headers
-set(FilterWidget_GEN_HDRS_File ${${PLUGIN_NAME}_BINARY_DIR}/FilterWidget_GEN_HDRS_File.cmake)
-set(FilterWidget_GEN_SRCS_File ${${PLUGIN_NAME}_BINARY_DIR}/FilterWidget_GEN_SRCS_File.cmake)
-file(WRITE ${FilterWidget_GEN_HDRS_File})
-file(WRITE ${FilterWidget_GEN_SRCS_File})
+
 
 set(Project_SRCS "")
 
@@ -120,16 +120,8 @@ include_directories( ${SIMPLProj_BINARY_DIR}/SVWidgetsLib)
 include_directories( ${SIMPLViewProj_SOURCE_DIR}/Source)
 include_directories( ${SIMPLViewProj_BINARY_DIR})
 
-# ******************************************************************************
-# Create our custom executable that will generate most of our QFilterWidget
-# classes from information stored in the Filters themselves.
-# Read the file back into a string so we can configure our file
-file(READ ${FilterWidget_GEN_HDRS_File} ${PLUGIN_NAME}Widget_GEN_HDRS)
-file(READ ${FilterWidget_GEN_SRCS_File} ${PLUGIN_NAME}Widget_GEN_SRCS)
 
-# Remove the temp files that we no longer need
-file(REMOVE ${FilterWidget_GEN_HDRS_File})
-file(REMOVE ${FilterWidget_GEN_SRCS_File})
+
 
 
 set(FILTER_HEADERS "#include \"${AllFiltersHeaderFile}\"")

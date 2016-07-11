@@ -43,7 +43,6 @@
 #endif
 
 #include "SIMPLib/Common/Constants.h"
-#include "SIMPLib/SIMPLibVersion.h"
 #include "SIMPLib/FilterParameters/AbstractFilterParametersReader.h"
 #include "SIMPLib/FilterParameters/AbstractFilterParametersWriter.h"
 #include "SIMPLib/FilterParameters/AttributeMatrixSelectionFilterParameter.h"
@@ -56,6 +55,7 @@
 #include "OrientationLib/OrientationMath/OrientationTransforms.hpp"
 
 #include "Sampling/SamplingConstants.h"
+#include "Sampling/SamplingVersion.h"
 
 typedef struct
 {
@@ -538,7 +538,8 @@ void RotateSampleRefFrame::execute()
       }
       else
       {
-        data->initializeTuple(i, 0);
+        int var = 0;
+        data->initializeTuple(i, &var);
       }
     }
     m->getAttributeMatrix(attrMatName)->addAttributeArray(*iter, data);
@@ -586,7 +587,7 @@ const QString RotateSampleRefFrame::getFilterVersion()
 {
   QString version;
   QTextStream vStream(&version);
-  vStream <<  SIMPLib::Version::Major() << "." << SIMPLib::Version::Minor() << "." << SIMPLib::Version::Patch();
+  vStream <<  Sampling::Version::Major() << "." << Sampling::Version::Minor() << "." << Sampling::Version::Patch();
   return version;
 }
 // -----------------------------------------------------------------------------

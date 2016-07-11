@@ -64,11 +64,11 @@
 #include "SIMPLib/Utilities/SIMPLibRandom.h"
 #include "SIMPLib/Utilities/TimeUtilities.h"
 #include "SIMPLib/Geometry/ImageGeom.h"
-#include "SIMPLib/SIMPLibVersion.h"
 
 #include "OrientationLib/OrientationMath/OrientationTransforms.hpp"
 
 #include "SyntheticBuilding/SyntheticBuildingConstants.h"
+#include "SyntheticBuilding/SyntheticBuildingVersion.h"
 
 // Macro to determine if we are going to show the Debugging Output files
 #define PPP_SHOW_DEBUG_OUTPUTS 0
@@ -241,8 +241,6 @@ PackPrimaryPhases::PackPrimaryPhases() :
   m_CsvOutputFile(""),
   m_PeriodicBoundaries(false),
   m_WriteGoalAttributes(false),
-  m_ErrorOutputFile(""),
-  m_VtkOutputFile(""),
   m_NeighborhoodsArrayName(SIMPL::FeatureData::Neighborhoods),
   m_CentroidsArrayName(SIMPL::FeatureData::Centroids),
   m_VolumesArrayName(SIMPL::FeatureData::Volumes),
@@ -265,7 +263,9 @@ PackPrimaryPhases::PackPrimaryPhases() :
   m_EquivalentDiameters(NULL),
   m_PhaseTypes(NULL),
   m_ShapeTypes(NULL),
-  m_NumFeatures(NULL)
+  m_NumFeatures(NULL),
+  m_ErrorOutputFile(""),
+  m_VtkOutputFile("")
 {
 
   initialize();
@@ -433,8 +433,8 @@ void PackPrimaryPhases::readFilterParameters(AbstractFilterParametersReader* rea
   setInputPhaseTypesArrayPath(reader->readDataArrayPath("InputPhaseTypesArrayPath", getInputPhaseTypesArrayPath() ) );
   setInputShapeTypesArrayPath(reader->readDataArrayPath("InputShapeTypesArrayPath", getInputShapeTypesArrayPath() ) );
   setMaskArrayPath(reader->readDataArrayPath("MaskArrayPath", getMaskArrayPath() ) );
-  setVtkOutputFile( reader->readString( "VtkOutputFile", getVtkOutputFile() ) );
-  setErrorOutputFile( reader->readString( "ErrorOutputFile", getErrorOutputFile() ) );
+//  setVtkOutputFile( reader->readString( "VtkOutputFile", getVtkOutputFile() ) );
+//  setErrorOutputFile( reader->readString( "ErrorOutputFile", getErrorOutputFile() ) );
   reader->closeFilterGroup();
 }
 
@@ -462,8 +462,8 @@ int PackPrimaryPhases::writeFilterParameters(AbstractFilterParametersWriter* wri
   SIMPL_FILTER_WRITE_PARAMETER(InputPhaseTypesArrayPath)
   SIMPL_FILTER_WRITE_PARAMETER(InputShapeTypesArrayPath)
   SIMPL_FILTER_WRITE_PARAMETER(MaskArrayPath)
-  SIMPL_FILTER_WRITE_PARAMETER(VtkOutputFile)
-  SIMPL_FILTER_WRITE_PARAMETER(ErrorOutputFile)
+//  SIMPL_FILTER_WRITE_PARAMETER(VtkOutputFile)
+//  SIMPL_FILTER_WRITE_PARAMETER(ErrorOutputFile)
   writer->closeFilterGroup();
   return ++index; // we want to return the next index that was just written to
 }
@@ -2924,7 +2924,7 @@ const QString PackPrimaryPhases::getFilterVersion()
 {
   QString version;
   QTextStream vStream(&version);
-  vStream <<  SIMPLib::Version::Major() << "." << SIMPLib::Version::Minor() << "." << SIMPLib::Version::Patch();
+  vStream <<  SyntheticBuilding::Version::Major() << "." << SyntheticBuilding::Version::Minor() << "." << SyntheticBuilding::Version::Patch();
   return version;
 }
 // -----------------------------------------------------------------------------

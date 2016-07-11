@@ -36,7 +36,6 @@
 #include "GenerateEnsembleStatistics.h"
 
 #include "SIMPLib/Common/Constants.h"
-#include "SIMPLib/SIMPLibVersion.h"
 #include "SIMPLib/Common/PhaseType.h"
 #include "SIMPLib/FilterParameters/AbstractFilterParametersReader.h"
 #include "SIMPLib/FilterParameters/AbstractFilterParametersWriter.h"
@@ -60,6 +59,7 @@
 #include "Statistics/DistributionAnalysisOps/PowerLawOps.h"
 #include "Statistics/DistributionAnalysisOps/LogNormalOps.h"
 #include "Statistics/StatisticsConstants.h"
+#include "Statistics/StatisticsVersion.h"
 
 #include "EbsdLib/EbsdConstants.h"
 
@@ -184,7 +184,7 @@ void GenerateEnsembleStatistics::setupFilterParameters()
   linkedProps << "AspectRatioDistributionFitType" << "AspectRatiosArrayPath";
   linkedProps << "Omega3DistributionFitType" << "Omega3sArrayPath";
   linkedProps << "NeighborhoodDistributionFitType" << "NeighborhoodsArrayPath";
-  linkedProps << "CalculateAxisODF" << "AxisEulerAnglesArrayPath";
+  linkedProps << "AxisEulerAnglesArrayPath";
   parameters.push_back(LinkedBooleanFilterParameter::New("Calculate Morphological Statistics", "CalculateMorphologicalStats", getCalculateMorphologicalStats(), linkedProps, FilterParameter::Parameter));
   parameters.push_back(ChoiceFilterParameter::New("Size Distribution Fit Type", "SizeDistributionFitType", getSizeDistributionFitType(), choices, false, FilterParameter::Parameter));
   {
@@ -217,8 +217,8 @@ void GenerateEnsembleStatistics::setupFilterParameters()
 
   linkedProps.clear();
   linkedProps << "CrystalStructuresArrayPath" << "SurfaceFeaturesArrayPath";
-  linkedProps << "CalculateODF" << "VolumesArrayPath" << "FeatureEulerAnglesArrayPath";
-  linkedProps << "CalculateMDF" << "SharedSurfaceAreaListArrayPath" << "AvgQuatsArrayPath";
+  linkedProps << "VolumesArrayPath" << "FeatureEulerAnglesArrayPath" << "AvgQuatsArrayPath";
+  linkedProps << "SharedSurfaceAreaListArrayPath" << "CrystalStructuresArrayPath";
   parameters.push_back(LinkedBooleanFilterParameter::New("Calculate Crystallographic Statistics", "CalculateCrystallographicStats", getCalculateCrystallographicStats(), linkedProps, FilterParameter::Parameter));
   {
     DataArraySelectionFilterParameter::RequirementType req = DataArraySelectionFilterParameter::CreateCategoryRequirement(SIMPL::TypeNames::Bool, 1, SIMPL::AttributeMatrixObjectType::Feature);
@@ -1413,7 +1413,7 @@ const QString GenerateEnsembleStatistics::getFilterVersion()
 {
   QString version;
   QTextStream vStream(&version);
-  vStream <<  SIMPLib::Version::Major() << "." << SIMPLib::Version::Minor() << "." << SIMPLib::Version::Patch();
+  vStream <<  Statistics::Version::Major() << "." << Statistics::Version::Minor() << "." << Statistics::Version::Patch();
   return version;
 }
 // -----------------------------------------------------------------------------

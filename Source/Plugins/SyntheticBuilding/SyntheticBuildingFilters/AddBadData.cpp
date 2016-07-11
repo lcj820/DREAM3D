@@ -36,7 +36,6 @@
 #include "AddBadData.h"
 
 #include "SIMPLib/Common/Constants.h"
-#include "SIMPLib/SIMPLibVersion.h"
 #include "SIMPLib/FilterParameters/AbstractFilterParametersReader.h"
 #include "SIMPLib/FilterParameters/AbstractFilterParametersWriter.h"
 #include "SIMPLib/FilterParameters/DoubleFilterParameter.h"
@@ -47,6 +46,7 @@
 #include "SIMPLib/Geometry/ImageGeom.h"
 
 #include "SyntheticBuilding/SyntheticBuildingConstants.h"
+#include "SyntheticBuilding/SyntheticBuildingVersion.h"
 
 // Include the MOC generated file for this class
 #include "moc_AddBadData.cpp"
@@ -209,7 +209,8 @@ void  AddBadData::add_noise()
         for (QList<QString>::iterator iter = voxelArrayNames.begin(); iter != voxelArrayNames.end(); ++iter)
         {
           IDataArray::Pointer p = m->getAttributeMatrix(attMatName)->getAttributeArray(*iter);
-          p->initializeTuple(i, 0);
+          int var = 0;
+          p->initializeTuple(i, &var);
         }
       }
     }
@@ -221,7 +222,8 @@ void  AddBadData::add_noise()
         for (QList<QString>::iterator iter = voxelArrayNames.begin(); iter != voxelArrayNames.end(); ++iter)
         {
           IDataArray::Pointer p = m->getAttributeMatrix(attMatName)->getAttributeArray(*iter);
-          p->initializeTuple(i, 0);
+          int var = 0;
+          p->initializeTuple(i, &var);
         }
       }
     }
@@ -264,7 +266,7 @@ const QString AddBadData::getFilterVersion()
 {
   QString version;
   QTextStream vStream(&version);
-  vStream <<  SIMPLib::Version::Major() << "." << SIMPLib::Version::Minor() << "." << SIMPLib::Version::Patch();
+  vStream <<  SyntheticBuilding::Version::Major() << "." << SyntheticBuilding::Version::Minor() << "." << SyntheticBuilding::Version::Patch();
   return version;
 }
 // -----------------------------------------------------------------------------

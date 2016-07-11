@@ -14,6 +14,7 @@
 #include "FilterParameters/ImportASCIIDataFilterParameter.h"
 
 #include "IO/IOConstants.h"
+#include "IO/IOVersion.h"
 
 #include "Widgets/ImportASCIIDataWizard/AbstractDataParser.hpp"
 #include "Widgets/ImportASCIIDataWizard/ImportASCIIDataWizard.h"
@@ -282,9 +283,9 @@ void ImportASCIIData::preflight()
 void ImportASCIIData::execute()
 {
   setErrorCondition(0);
+  initialize();
   dataCheck();
   if(getErrorCondition() < 0) { return; }
-  initialize();
 
   ASCIIWizardData wizardData = getWizardData();
   QString inputFilePath = wizardData.inputFilePath;

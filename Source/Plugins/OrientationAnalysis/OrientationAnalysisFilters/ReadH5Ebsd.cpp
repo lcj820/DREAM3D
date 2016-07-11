@@ -39,7 +39,6 @@
 
 #include "SIMPLib/Common/Constants.h"
 #include "SIMPLib/Common/FilterManager.h"
-#include "SIMPLib/SIMPLibVersion.h"
 #include "SIMPLib/FilterParameters/AbstractFilterParametersReader.h"
 #include "SIMPLib/FilterParameters/AbstractFilterParametersWriter.h"
 #include "SIMPLib/FilterParameters/StringFilterParameter.h"
@@ -54,6 +53,7 @@
 #include "EbsdLib/TSL/H5AngVolumeReader.h"
 
 #include "OrientationAnalysis/OrientationAnalysisConstants.h"
+#include "OrientationAnalysis/OrientationAnalysisVersion.h"
 #include "OrientationAnalysis/FilterParameters/ReadH5EbsdFilterParameter.h"
 
 // Include the MOC generated file for this class
@@ -115,7 +115,7 @@ ReadH5Ebsd::~ReadH5Ebsd()
 void ReadH5Ebsd::setupFilterParameters()
 {
   FilterParameterVector parameters;
-  parameters.push_back(ReadH5EbsdFilterParameter::New("Read H5Ebsd File", "", "", FilterParameter::Parameter));
+  parameters.push_back(ReadH5EbsdFilterParameter::New("Read H5Ebsd File", "ReadH5Ebsd", "__NULL__", FilterParameter::Parameter));
   parameters.push_back(StringFilterParameter::New("Data Container", "DataContainerName", getDataContainerName(), FilterParameter::CreatedArray));
   parameters.push_back(SeparatorFilterParameter::New("Cell Data", FilterParameter::CreatedArray));
   parameters.push_back(StringFilterParameter::New("Cell Attribute Matrix", "CellAttributeMatrixName", getCellAttributeMatrixName(), FilterParameter::CreatedArray));
@@ -1048,7 +1048,7 @@ const QString ReadH5Ebsd::getFilterVersion()
 {
   QString version;
   QTextStream vStream(&version);
-  vStream <<  SIMPLib::Version::Major() << "." << SIMPLib::Version::Minor() << "." << SIMPLib::Version::Patch();
+  vStream <<  OrientationAnalysis::Version::Major() << "." << OrientationAnalysis::Version::Minor() << "." << OrientationAnalysis::Version::Patch();
   return version;
 }
 // -----------------------------------------------------------------------------

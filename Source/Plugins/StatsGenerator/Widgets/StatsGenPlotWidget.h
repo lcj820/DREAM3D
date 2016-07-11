@@ -122,7 +122,15 @@ class StatsGenPlotWidget : public QWidget, private Ui::StatsGenPlotWidget
     void showDataWindow(bool b);
 
   protected:
+
     void resetTableModel();
+
+    /**
+     * @brief initQwtPlot
+     * @param xAxisName
+     * @param yAxisName
+     * @param plot
+     */
     void initQwtPlot(QString xAxisName, QString yAxisName, QwtPlot* plot);
 
   private:
