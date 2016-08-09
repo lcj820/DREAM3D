@@ -62,7 +62,7 @@ class StatsGenFeatureSizeWidget : public QWidget, private Ui::StatsGenFeatureSiz
                                float& xMax, float& yMax,
                                QwtArray<float>& x,
                                QwtArray<float>& y);
-    void calculateNumberOfBins();
+    int calculateNumberOfBins();
     int calculateNumberOfBins(float mu, float sigma, float minCutOff, float maxCutOff, float stepSize);
     int gatherSizeDistributionFromGui(float& mu, float& sigma, float& minCutOff, float& maxCutOff, float& stepSize);
 

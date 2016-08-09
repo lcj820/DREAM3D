@@ -247,9 +247,14 @@ void StatsGenFeatureSizeWidget::on_m_Mu_SizeDistribution_textChanged(const QStri
   {
     return;
   }
+
+  int numBins = calculateNumberOfBins();
+  if(numBins < 0)
+  {return;}
+
   updateSizeDistributionPlot();
   m_Mu_SizeDistribution->setFocus();
-  calculateNumberOfBins();
+
   emit phaseParametersChanged();
 }
 
@@ -306,7 +311,7 @@ void StatsGenFeatureSizeWidget::on_m_BinStepSize_valueChanged(double v)
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
-void StatsGenFeatureSizeWidget::calculateNumberOfBins()
+int StatsGenFeatureSizeWidget::calculateNumberOfBins()
 {
   float mu = 1.0;
   float sigma = 1.0;
@@ -317,18 +322,31 @@ void StatsGenFeatureSizeWidget::calculateNumberOfBins()
   int err = gatherSizeDistributionFromGui(mu, sigma, minCutOff, maxCutOff, stepSize);
   if (err == 0)
   {
-    return;
+    m_NumberBinsGenerated->setText("Error");
+    return -1;
   }
 
   int n = StatsGen::ComputeNumberOfBins(mu, sigma, minCutOff, maxCutOff, stepSize, max, min);
-  if(err < 0)
+
+  if(n > 50)
   {
-    m_NumberBinsGenerated->setText("Error");
+    QMessageBox msgBox;
+    msgBox.setText("Large Number of Bins Created.");
+    QString msg = QString("%1 Bins will be created which may slow or crash DREAM.3D. Do you want to continue?").arg(n);
+    msgBox.setInformativeText(msg);
+    msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
+    msgBox.setDefaultButton(QMessageBox::Cancel);
+    int ret = msgBox.exec();
+    if(ret == QMessageBox::Cancel) {
+      m_NumberBinsGenerated->setText("Error");
+      return -1;
+    }
   }
-  else
-  {
-    m_NumberBinsGenerated->setText(QString::number(n));
-  }
+
+
+  m_NumberBinsGenerated->setText(QString::number(n));
+
+  return n;
 }
 
 // -----------------------------------------------------------------------------

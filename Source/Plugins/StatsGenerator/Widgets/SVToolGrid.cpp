@@ -366,7 +366,7 @@ void SVToolGrid::shiftGrid( int start, int count)
     end = start - 1;
   }
   else {
-    start = start;
+    //start = start;
     end = button_count;
   }
 
