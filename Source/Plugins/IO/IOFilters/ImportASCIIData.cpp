@@ -8,7 +8,6 @@
 
 #include "SIMPLib/Common/Constants.h"
 #include "SIMPLib/FilterParameters/AbstractFilterParametersReader.h"
-#include "SIMPLib/FilterParameters/AbstractFilterParametersWriter.h"
 #include "SIMPLib/FilterParameters/AttributeMatrixSelectionFilterParameter.h"
 
 #include "FilterParameters/ImportASCIIDataFilterParameter.h"
@@ -49,7 +48,7 @@ void ImportASCIIData::setupFilterParameters()
 
   {
     AttributeMatrixSelectionFilterParameter::RequirementType req;
-    parameters.push_back(AttributeMatrixSelectionFilterParameter::New("Attribute Matrix", "AttributeMatrixPath", getAttributeMatrixPath(), FilterParameter::Parameter, req));
+    parameters.push_back(AttributeMatrixSelectionFilterParameter::New("Attribute Matrix", "AttributeMatrixPath", getAttributeMatrixPath(), FilterParameter::Parameter, req, SIMPL_BIND_SETTER(ImportASCIIData, this, AttributeMatrixPath), SIMPL_BIND_GETTER(ImportASCIIData, this, AttributeMatrixPath)));
   }
 
   setFilterParameters(parameters);
@@ -99,39 +98,111 @@ void ImportASCIIData::readFilterParameters(AbstractFilterParametersReader* reade
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
-int ImportASCIIData::writeFilterParameters(AbstractFilterParametersWriter* writer, int index)
+void ImportASCIIData::readFilterParameters(QJsonObject &obj)
 {
-  writer->openFilterGroup(this, index);
+  AbstractFilter::readFilterParameters(obj);
 
   QString prefix = "Wizard_";
 
-  QString delimitersStr = "";
-  for (int i = 0; i < m_WizardData.delimiters.size(); i++)
+  m_WizardData.beginIndex = obj[prefix + "BeginIndex"].toInt();
+  m_WizardData.consecutiveDelimiters = static_cast<bool>(obj[prefix + "ConsecutiveDelimiters"].toInt());
+  m_WizardData.inputFilePath = obj[prefix + "InputFilePath"].toString();
+  m_WizardData.numberOfLines = obj[prefix + "NumberOfLines"].toInt();
+
   {
-    delimitersStr.append(m_WizardData.delimiters[i]);
+    QJsonArray jsonArray = obj[prefix + "DataHeaders"].toArray();
+    QStringList dataHeaders;
+    for (int i=0; i<jsonArray.size(); i++)
+    {
+      dataHeaders.push_back(jsonArray[i].toString());
+    }
+    m_WizardData.dataHeaders = dataHeaders;
   }
 
-  writer->writeValue(prefix + "Delimiters", delimitersStr);
-  writer->writeValue(prefix + "BeginIndex", m_WizardData.beginIndex);
-  writer->writeValue(prefix + "ConsecutiveDelimiters", m_WizardData.consecutiveDelimiters);
-  writer->writeValue(prefix + "DataHeaders", m_WizardData.dataHeaders);
-  writer->writeValue(prefix + "DataTypes", m_WizardData.dataTypes);
-  writer->writeValue(prefix + "InputFilePath", m_WizardData.inputFilePath);
-  writer->writeValue(prefix + "NumberOfLines", m_WizardData.numberOfLines);
-  QVector<uint64_t> tDims;
-  QVector<size_t> tmpVec = m_WizardData.tupleDims;
-
-  for (int i = 0; i < tmpVec.size(); i++)
   {
-    tDims.push_back(static_cast<uint64_t>(tmpVec[i]));
+    QJsonArray jsonArray = obj[prefix + "DataTypes"].toArray();
+    QStringList dataTypes;
+    for (int i=0; i<jsonArray.size(); i++)
+    {
+      dataTypes.push_back(jsonArray[i].toString());
+    }
+    m_WizardData.dataTypes = dataTypes;
   }
 
-  writer->writeValue(prefix + "TupleDims", tDims);
+  {
+    QString delimitersStr = obj[prefix + "Delimiters"].toString();
+    QList<char> delimiters;
+    for (int i = 0; i < delimitersStr.size(); i++)
+    {
+      delimiters.push_back(delimitersStr[i].toLatin1());
+    }
+    m_WizardData.delimiters = delimiters;
+  }
 
-  SIMPL_FILTER_WRITE_PARAMETER(AttributeMatrixPath)
+  {
+    QJsonArray jsonArray = obj[prefix + "TupleDims"].toArray();
+    QVector<size_t> tupleDims;
+    for (int i=0; i<jsonArray.size(); i++)
+    {
+      tupleDims.push_back(static_cast<size_t>(jsonArray[i].toInt()));
+    }
 
-  writer->closeFilterGroup();
-  return ++index; // we want to return the next index that was just written to
+    m_WizardData.tupleDims = tupleDims;
+  }
+}
+
+// FP: Check why these values are not connected to a filter parameter!
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void ImportASCIIData::writeFilterParameters(QJsonObject &obj)
+{
+  AbstractFilter::writeFilterParameters(obj);
+
+  QString prefix = "Wizard_";
+
+  obj[prefix + "BeginIndex"] = m_WizardData.beginIndex;
+  obj[prefix + "ConsecutiveDelimiters"] = static_cast<int>(m_WizardData.consecutiveDelimiters);
+  obj[prefix + "InputFilePath"] = m_WizardData.inputFilePath;
+  obj[prefix + "NumberOfLines"] = m_WizardData.numberOfLines;
+
+  {
+    QJsonArray jsonArray;
+    for (int i=0; i<m_WizardData.dataHeaders.size(); i++)
+    {
+      jsonArray.push_back(m_WizardData.dataHeaders[i]);
+    }
+    obj[prefix + "DataHeaders"] = jsonArray;
+  }
+
+  {
+    QJsonArray jsonArray;
+    for (int i=0; i<m_WizardData.dataTypes.size(); i++)
+    {
+      jsonArray.push_back(m_WizardData.dataTypes[i]);
+    }
+    obj[prefix + "DataTypes"] = jsonArray;
+  }
+
+  {
+    QString delimitersStr = "";
+    for (int i = 0; i < m_WizardData.delimiters.size(); i++)
+    {
+      delimitersStr.append(m_WizardData.delimiters[i]);
+    }
+
+    obj[prefix + "Delimiters"] = delimitersStr;
+  }
+
+  {
+    QJsonArray jsonArray;
+    for (int i=0; i<m_WizardData.tupleDims.size(); i++)
+    {
+      jsonArray.push_back(static_cast<int>(m_WizardData.tupleDims[i]));
+    }
+    obj[prefix + "TupleDims"] = jsonArray;
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -153,7 +224,7 @@ void ImportASCIIData::dataCheck()
   ASCIIWizardData wizardData = getWizardData();
   if (wizardData.isEmpty() == true)
   {
-    QString ss = "A file has not been chosen to import.  Please pick a file to import.";
+    QString ss = "A file has not been chosen to import. Please pick a file to import.";
     setErrorCondition(EMPTY_FILE);
     notifyErrorMessage(getHumanLabel(), ss, getErrorCondition());
     return;
@@ -166,18 +237,34 @@ void ImportASCIIData::dataCheck()
   QVector<size_t> cDims(1, 1);
 
   QFileInfo fi(inputFilePath);
+  if (inputFilePath.isEmpty() == true)
+  {
+    QString ss = QObject::tr("The input file must be set");
+    setErrorCondition(-387);
+    notifyErrorMessage(getHumanLabel(), ss, getErrorCondition());
+  }
+  else if (fi.exists() == false)
+  {
+    QString ss = QObject::tr("The input file does not exist");
+    setErrorCondition(-388);
+    notifyErrorMessage(getHumanLabel(), ss, getErrorCondition());
+  }
 
   AttributeMatrix::Pointer am = getDataContainerArray()->getAttributeMatrix(m_AttributeMatrixPath);
   if (NULL == am.get())
   {
-    QString ss = "The attribute matrix input is empty.  Please select an attribute matrix.";
+    QString ss = "The attribute matrix input is empty. Please select an attribute matrix.";
     setErrorCondition(EMPTY_ATTR_MATRIX);
     notifyErrorMessage(getHumanLabel(), ss, getErrorCondition());
     return;
   }
   else if (am->getTupleDimensions() != tDims)
   {
+
     QString ss = "The attribute matrix '" + m_AttributeMatrixPath.getAttributeMatrixName() + "' does not have the same tuple dimensions as the data in the file '" + fi.fileName() + "'.";
+    QTextStream out(&ss);
+    out << m_AttributeMatrixPath.getAttributeMatrixName() << " tuple dims: " << am->getTupleDimensions().at(0) << "\n";
+    out << fi.fileName() << "tuple dims: " << tDims[0] << "\n";
     setErrorCondition(INCONSISTENT_TUPLES);
     notifyErrorMessage(getHumanLabel(), ss, getErrorCondition());
     return;
@@ -390,7 +477,11 @@ void ImportASCIIData::execute()
 
       if (dataTypes.size() != tokens.size())
       {
-        QString ss = "Line " + QString::number(lineNum) + " has an inconsistent number of columns.";
+        QString ss = "Line " + QString::number(lineNum) + " has an inconsistent number of columns.\n";
+        QTextStream out(&ss);
+        out << "Expecting " << dataTypes.size() << " but found " << tokens.size() << "\n";
+        out << "Input line was:\n";
+        out << line;
         setErrorCondition(INCONSISTENT_COLS);
         notifyErrorMessage(getHumanLabel(), ss, getErrorCondition());
         return;
