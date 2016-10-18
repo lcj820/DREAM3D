@@ -183,25 +183,16 @@ bool ReadHDF5TreeModelItem::isString()
 QIcon ReadHDF5TreeModelItem::icon()
 {
   QString iconName = "";
+
   if (this->isGroup() == true)
   {
-    iconName = ":/folderclose";
-  }
-  else if (this->isImage() )
-  {
-    iconName = ":/image";
+    iconName = ":/folder_blue.png";
   }
   else
   {
-    iconName = ":/dataset";
+    iconName = ":/cube_molecule.png";
   }
 
-  if (this->numAttributes() > 0)
-  {
-    iconName = iconName.append("A");
-  }
-
-  iconName = iconName.append(".png");
   return QIcon(iconName);
 }
 

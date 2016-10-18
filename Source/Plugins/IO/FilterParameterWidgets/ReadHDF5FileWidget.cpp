@@ -61,6 +61,10 @@
 
 #include "IO/FilterParameterWidgets/ReadHDF5TreeModel.h"
 #include "IO/FilterParameterWidgets/ReadHDF5TreeModelItem.h"
+#include "IO/FilterParameters/ReadHDF5FileFilterParameter.h"
+#include "IO/IOFilters/ReadHDF5File.h"
+
+#include "SVWidgetsLib/FilterParameterWidgets/FilterParameterWidgetsDialogs.h"
 
 //#include <QHDFDataTableWindow.h>
 //#include <QHDFStringDataWindow.h>
@@ -85,8 +89,30 @@ ReadHDF5FileWidget::ReadHDF5FileWidget(FilterParameter* parameter, AbstractFilte
   m_CurrentHDFDataPath(""),
   m_FileId(-1)
 {
+  m_FilterParameter = dynamic_cast<ReadHDF5FileFilterParameter*>(parameter);
+  Q_ASSERT_X(m_FilterParameter != nullptr, "NULL Pointer", "ReadHDF5FileWidget can ONLY be used with an ReadHDF5FileFilterParameter object");
+
+  m_Filter = dynamic_cast<ReadHDF5File*>(filter);
+  Q_ASSERT_X(m_Filter != nullptr, "NULL Pointer", "ReadHDF5FileWidget can ONLY be used with an ReadHDF5File filter");
+
   setupUi(this);
   setupGui();
+
+  if(filter)
+  {
+    QString currentPath = filter->property(PROPERTY_NAME_AS_CHAR).toString();
+    if(currentPath.isEmpty() == false)
+    {
+      currentPath = QDir::toNativeSeparators(currentPath);
+      // Store the last used directory into the private instance variable
+      QFileInfo fi(currentPath);
+      m_OpenDialogLastDirectory = fi.path();
+    }
+    else
+    {
+      m_OpenDialogLastDirectory = QDir::homePath();
+    }
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -102,25 +128,104 @@ ReadHDF5FileWidget::~ReadHDF5FileWidget()
 }
 
 // -----------------------------------------------------------------------------
-//  Called when the main window is closed.
+//
 // -----------------------------------------------------------------------------
-void ReadHDF5FileWidget::closeEvent(QCloseEvent *event)
+void ReadHDF5FileWidget::setupGui()
 {
-  // std::cout << "ReadHDF5FileWidget::closeEvent(QCloseEvent *event)" << std::endl;
-  closeAllChildWindows();
-  qint32 err = _checkDirtyDocument();
-  if (this->m_FileId > 0)
+  // Catch when the filter is about to execute the preflight
+  connect(getFilter(), SIGNAL(preflightAboutToExecute()), this, SLOT(beforePreflight()));
+
+  // Catch when the filter is finished running the preflight
+  connect(getFilter(), SIGNAL(preflightExecuted()), this, SLOT(afterPreflight()));
+
+  // Catch when the filter wants its values updated
+  connect(getFilter(), SIGNAL(updateFilterParameters(AbstractFilter*)), this, SLOT(filterNeedsInputParameters(AbstractFilter*)));
+
+  QFont inputFileFont;
+  inputFileFont.setBold(true);
+  inputFileFont.setItalic(true);
+  inputFileFont.setWeight(75);
+  inputFileFont.setStyleStrategy(QFont::PreferAntialias);
+// inputFileFont.setFamily(QString::fromUtf8("Times New Roman"));
+#if defined(Q_OS_MAC)
+  inputFileFont.setPointSize(12);
+#elif defined(Q_OS_WIN)
+  inputFileFont.setPointSize(9);
+#else
+  inputFileFont.setPointSize(10);
+#endif
+
+  value->setFont(inputFileFont);
+
+  if (m_Filter != nullptr)
   {
-    H5Fclose(this->m_FileId);
+
   }
-  if (err < 0)
+
+  if (m_FilterParameter != nullptr)
   {
-    event->ignore();
+    selectBtn->setText(m_FilterParameter->getHumanLabel() + " ...");
+
+    QString currentPath = getFilter()->property(PROPERTY_NAME_AS_CHAR).toString();
+    value->setText(currentPath);
+  }
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+bool ReadHDF5FileWidget::verifyPathExists(QString filePath, QtSFSDropLabel* lineEdit)
+{
+  QFileInfo fileinfo(filePath);
+  if(false == fileinfo.exists())
+  {
+    // lineEdit->setStyleSheet("border: 1px solid red;");
+    lineEdit->changeStyleSheet(QtSFSDropLabel::FS_DOESNOTEXIST_STYLE);
   }
   else
   {
-    event->accept();
+    lineEdit->changeStyleSheet(QtSFSDropLabel::FS_STANDARD_STYLE);
   }
+  return fileinfo.exists();
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void ReadHDF5FileWidget::on_value_fileDropped(const QString& text)
+{
+  m_OpenDialogLastDirectory = text;
+
+  // Set/Remove the red outline if the file does exist
+  if(verifyPathExists(text, value) == true)
+  {
+    emit parametersChanged(); // This should force the preflight to run because we are emitting a signal
+  }
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void ReadHDF5FileWidget::on_selectBtn_clicked()
+{
+
+  // QString currentPath = getFilter()->property(PROPERTY_NAME_AS_CHAR).toString();
+  QString s = QString("HDF5 Files (*.hdf5 *.h5);;All Files(*.*)");
+  // QString defaultName = m_OpenDialogLastDirectory + QDir::separator() + "Untitled";
+  QString file = QFileDialog::getOpenFileName(this, tr("Select HDF5 File"), m_OpenDialogLastDirectory, s);
+
+  if(true == file.isEmpty()) { return; }
+
+  file = QDir::toNativeSeparators(file);
+
+  // Store the last used directory into the private instance variable
+  QFileInfo fi(file);
+  m_OpenDialogLastDirectory = fi.path();
+  value->setText(file);
+
+  openHDF5File(file);
+
+  emit parametersChanged();
 }
 
 // -----------------------------------------------------------------------------
@@ -135,7 +240,7 @@ void ReadHDF5FileWidget::dragEnterEvent(QDragEnterEvent* e)
   this->m_OpenDialogLastDirectory = parent.dirName();
   QFileInfo fi(file );
   QString ext = fi.suffix();
-  if (fi.exists() && fi.isFile() && ( ext.compare("mxa") || ext.compare("h5") || ext.compare("hdf5") ) )
+  if (fi.exists() && fi.isFile() && ( ext.compare("dream3d") || ext.compare("h5") || ext.compare("hdf5") ) )
   {
     e->accept();
   }
@@ -158,11 +263,12 @@ void ReadHDF5FileWidget::dropEvent(QDropEvent* e)
   QFileInfo fi(file );
   QString ext = fi.suffix();
   file = QDir::toNativeSeparators(file);
-  if (fi.exists() && fi.isFile() &&( ext.compare("mxa") || ext.compare("h5") || ext.compare("hdf5") ) )
+  if (fi.exists() && fi.isFile() &&( ext.compare("h5") || ext.compare("hdf5") || ext.compare("dream3d")) )
   {
     QDir parent (file);
     this->m_OpenDialogLastDirectory = parent.dirName();
     openHDF5File(file);
+    emit parametersChanged();
   }
 }
 
@@ -183,14 +289,6 @@ void ReadHDF5FileWidget::focusOutEvent(QFocusEvent* event)
 {
   //TODO: Implement this
   QWidget::focusOutEvent(event);
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-void ReadHDF5FileWidget::setupGui()
-{
-
 }
 
 // -----------------------------------------------------------------------------
@@ -232,70 +330,35 @@ void ReadHDF5FileWidget::actionOpen_triggered()
 // -----------------------------------------------------------------------------
 void ReadHDF5FileWidget::openHDF5File(QString &hdfFile)
 {
-  if ( true == hdfFile.isNull() ) // User cancelled the operation
-  {
-    return;
-  }
-  else
-  {
-    this->initWithFile(hdfFile);
-  }
+  if ( true == hdfFile.isNull() ) { return; }
+
+  initWithFile(hdfFile);
 }
 
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
-qint32 ReadHDF5FileWidget::_checkDirtyDocument()
+void ReadHDF5FileWidget::initWithFile(QString hdf5File)
 {
-  qint32 err = 1;
-
-#if 0
-  This section should be enabled if we are going to do any editing of the document
-      if (this->isWindowModified() == true)
+  // Delete the old model
+  QAbstractItemModel* oldModel = hdfTreeView->model();
+  if (oldModel != nullptr)
   {
-    int r = QMessageBox::warning(this, tr("MXA Editor"),
-                                 tr("The Model has been modified.\nDo you want to save your changes?"),
-                                 QMessageBox::Save | QMessageBox::Default,
-                                 QMessageBox::Discard,
-                                 QMessageBox::Cancel | QMessageBox::Escape);
-    if (r == QMessageBox::Save)
-    {
-      err = this->_saveDataModel();
-    }
-    else if (r == QMessageBox::Discard)
-    {
-      err = 1;
-    }
-    else if (r == QMessageBox::Cancel)
-    {
-      err = -1;
-    }
+    delete oldModel;
   }
-  else
-  {
-    err = 1;
-  }
-#endif
-  return err;
-}
 
-
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-void ReadHDF5FileWidget::initWithFile(const QString &hdfFile)
-{
   //std::cout << "ReadHDF5FileWidget::initWithFile" << std::endl;
   // Save the last place the user visited while opening the file
-  QFileInfo fileInfo(hdfFile);
-  this->m_OpenDialogLastDirectory = fileInfo.path();
-  m_CurrentOpenFile = hdfFile;
+  hdf5File = QDir::toNativeSeparators(hdf5File);
 
-  m_FileId = H5Utilities::openFile(hdfFile.toStdString(), true);
+  QFileInfo fileInfo(hdf5File);
+  this->m_OpenDialogLastDirectory = fileInfo.path();
+  m_CurrentOpenFile = hdf5File;
+
+  m_FileId = H5Utilities::openFile(hdf5File.toStdString(), true);
   if (m_FileId < 0)
   {
-    std::cout << "Error Reading HDF5 file: " << hdfFile.toStdString() << std::endl;
+    std::cout << "Error Reading HDF5 file: " << hdf5File.toStdString() << std::endl;
     return;
   }
 
@@ -305,7 +368,7 @@ void ReadHDF5FileWidget::initWithFile(const QString &hdfFile)
 
   //Get the ReadHDF5TreeModel and set the Root Node
   ReadHDF5TreeModel* treeModel = new ReadHDF5TreeModel(this->m_FileId, this->hdfTreeView);
-  this->hdfTreeView->setModel(treeModel); //Set the QAbstractItemModel into the tree view
+  hdfTreeView->setModel(treeModel); //Set the QAbstractItemModel into the tree view
   //this->hdfTreeView->header()->hide();    // Hide the header
   //this->hdfTreeView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
   //this->hdfTreeView->setTextElideMode(Qt::ElideMiddle);
@@ -318,21 +381,11 @@ void ReadHDF5FileWidget::initWithFile(const QString &hdfFile)
 
   //Connect the Tree View selection Model to a method in this class
   connect(hdfTreeView->selectionModel(), SIGNAL(currentChanged( QModelIndex, QModelIndex ) ), this, SLOT(hdfTreeView_currentChanged( QModelIndex, QModelIndex) ));
-
+#if READ_HDF5_EXTRA_FEATURES
   connect(hdfTreeView, SIGNAL(doubleClicked( QModelIndex ) ), this, SLOT(hdfTreeView_doubleClicked( QModelIndex) ));
-
+#endif
   this->attributesTable->horizontalHeader()->setStretchLastSection(true); // Stretch the last column to fit to the viewport
 
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-std::string ReadHDF5FileWidget::generateHDFPath()
-{
-  std::string frontPath;
-  //TODO: Implelement this. or maybe in the model....
-  return frontPath;
 }
 
 // -----------------------------------------------------------------------------
@@ -700,16 +753,25 @@ IH5DataWindow* ReadHDF5FileWidget::findDataWindow(const QString &hdfPath)
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
-void ReadHDF5FileWidget::closeAllChildWindows()
+void ReadHDF5FileWidget::filterNeedsInputParameters(AbstractFilter* filter)
 {
-  //QString canonicalFilePath = QFileInfo(fileName).canonicalFilePath();
+  Q_UNUSED(filter)
 
-  foreach (QWidget *widget, qApp->topLevelWidgets())
-  {
-    QWidget *mainWin = qobject_cast<QWidget *>(widget);
-    if (mainWin && mainWin->parent() == this)
-    {
-      mainWin->close();
-    }
-  }
+  m_Filter->setHDF5FilePath(value->text());
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void ReadHDF5FileWidget::beforePreflight()
+{
+
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void ReadHDF5FileWidget::afterPreflight()
+{
+
 }

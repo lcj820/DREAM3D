@@ -50,6 +50,8 @@
 
 class IH5DataWindow;
 class QDockWidget;
+class ReadHDF5FileFilterParameter;
+class ReadHDF5File;
 
 /* Uses the 'Private Inheritance' method from the *.ui file */
 /**
@@ -90,14 +92,31 @@ public:
    */
   QString getCurrentFile() { return m_CurrentOpenFile; }
 
-protected:
+  /**
+   * @brief verifyPathExists
+   * @param filePath
+   * @param lineEdit
+   * @return
+   */
+  bool verifyPathExists(QString filePath, QtSFSDropLabel* lineEdit);
+
+public slots:
+  void beforePreflight();
+  void afterPreflight();
+  void filterNeedsInputParameters(AbstractFilter* filter);
 
   /**
-   * @brief Implements the CloseEvent to Quit the application and write settings
-   * to the preference file
+   * @brief on_value_fileDropped
+   * @param text
    */
-  void closeEvent(QCloseEvent *event);
+  void on_value_fileDropped(const QString& text);
 
+  /**
+   * @brief on_selectBtn_clicked
+   */
+  void on_selectBtn_clicked();
+
+protected:
   /**
    * @brief Drag and drop implementation
    */
@@ -114,17 +133,15 @@ protected:
   void setupGui();
 
   /**
-   * @brief checks to make sure undocked widgets are correctly positioned on screen.
-   * @param dock_widget the QDockWidget to check.
+   * @brief initWithFile Initializes the window by trying to open and populate the window
+   * with values from the passed in hdf5 file
+   * @param hdf5File
    */
-  void sanityCheckDock(QDockWidget* dock_widget);
+  void initWithFile(QString hdf5File);
 
-  /**
-   * @brief Initializes the window by trying to open and populate the window
-   * with values from the passed in file
-   * @param mxaFile A Path to an MXA File
-   */
-  void initWithFile(const QString &mxaFile);
+signals:
+  void errorSettingFilterParameter(const QString& msg);
+  void parametersChanged();
 
 private slots:
   #if READ_HDF5_EXTRA_FEATURES
@@ -147,20 +164,13 @@ private slots:
 
 private:
 
-  static QString                m_OpenDialogLastDirectory; //Stores the last directory the user visited
-  QString                       m_CurrentOpenFile;    //Stores the currently open HDF5 File
-  std::string                   m_CurrentHDFDataPath;  //Stores the currently viewed HDF data path
-  hid_t                         m_FileId;
+  static QString                                    m_OpenDialogLastDirectory; //Stores the last directory the user visited
+  QString                                           m_CurrentOpenFile;    //Stores the currently open HDF5 File
+  std::string                                       m_CurrentHDFDataPath;  //Stores the currently viewed HDF data path
+  hid_t                                             m_FileId;
 
-  /**
-   * @brief Generates the path to the HDF dataset based on the values in the
-   * data dimension table and the selected data record.
-   * @param model The MXADataModel
-   * @param indices The Indices for the Data Dimensions
-   * @param record The selected MXADataRecord
-   * @return The path as a std::string object
-   */
-  std::string generateHDFPath();
+  ReadHDF5FileFilterParameter*                     m_FilterParameter;
+  ReadHDF5File*                                    m_Filter;
 
   /**
    * @brief Updates the QGraphicsView based on the current Data Dimension and Data record values
@@ -172,13 +182,9 @@ private:
   herr_t updateGeneralTable(const QString &path);
   void addRow(QTableWidget* table, int row, const QString &key, const QString &value);
 
-  qint32 _checkDirtyDocument();
-
   #if READ_HDF5_EXTRA_FEATURES
   IH5DataWindow* findDataWindow(const QString &hdfPath);
 #endif
-
-  void closeAllChildWindows();
 
   ~ReadHDF5FileWidget();
   ReadHDF5FileWidget(const ReadHDF5FileWidget&);   //Copy Constructor Not Implemented

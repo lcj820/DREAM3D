@@ -41,6 +41,7 @@ set(_PublicFilters
   WriteASCIIData
   WriteStlFile
   WriteTriangleGeometry
+  ReadHDF5File
 )
 
 #--------------
