@@ -6,6 +6,12 @@ set(${PLUGIN_NAME}_ParameterWidgets_UIS "")
 
 set(${PLUGIN_NAME}_PARAMETER_WIDGETS
   ReadASCIIDataWidget
+  ReadHDF5FileWidget
+)
+
+set(${PLUGIN_NAME}_EXTRA_CLASSES
+  ReadHDF5TreeModel
+  ReadHDF5TreeModelItem
 )
 
 # --------------------------------------------------------------------
@@ -48,7 +54,16 @@ foreach(FPW ${${PLUGIN_NAME}_PARAMETER_WIDGETS})
   file(APPEND  ${AllFilterParameterWidgetsHeaderFile} "#include \"${PLUGIN_NAME}/FilterParameterWidgets/${FPW}.h\"\n")
 endforeach()
 
-
+foreach(FPW ${${PLUGIN_NAME}_EXTRA_CLASSES})
+  set(${PLUGIN_NAME}_ParameterWidgets_MOC_HDRS
+    ${${PLUGIN_NAME}_ParameterWidgets_MOC_HDRS}
+    ${${PLUGIN_NAME}_SOURCE_DIR}/FilterParameterWidgets/${FPW}.h
+    )
+  set(${PLUGIN_NAME}_ParameterWidgets_SRCS
+    ${${PLUGIN_NAME}_ParameterWidgets_SRCS}
+    ${${PLUGIN_NAME}_SOURCE_DIR}/FilterParameterWidgets/${FPW}.cpp
+    )
+endforeach()
 
 # --------------------------------------------------------------------
 # Close off the files with the proper C++
