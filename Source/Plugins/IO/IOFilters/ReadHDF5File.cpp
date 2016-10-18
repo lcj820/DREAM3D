@@ -106,15 +106,15 @@ void ReadHDF5File::execute()
   dataCheck();
   if(getErrorCondition() < 0) { return; }
 
-  if (getCancel() == true) { return; }
+//  if (getCancel() == true) { return; }
 
-  if (getErrorCondition() < 0)
-  {
-    QString ss = QObject::tr("Some error message");
-    setErrorCondition(-99999999);
-    notifyErrorMessage(getHumanLabel(), ss, getErrorCondition());
-    return;
-  }
+//  if (getErrorCondition() < 0)
+//  {
+//    QString ss = QObject::tr("Some error message");
+//    setErrorCondition(-99999999);
+//    notifyErrorMessage(getHumanLabel(), ss, getErrorCondition());
+//    return;
+//  }
 
   notifyStatusMessage(getHumanLabel(), "Complete");
 }
