@@ -46,7 +46,7 @@
 //-- UIC generated Header
 #include <ui_ReadHDF5FileWidget.h>
 
-#define READ_HDF5_EXTRA_FEATURES 0
+#define READ_HDF5_EXTRA_FEATURES 1
 
 class IH5DataWindow;
 class QDockWidget;
@@ -67,18 +67,6 @@ class ReadHDF5FileWidget : public FilterParameterWidget, private Ui::ReadHDF5Fil
 
 public:
   ReadHDF5FileWidget(FilterParameter* parameter, AbstractFilter* filter = nullptr, QWidget* parent = nullptr);
-
-  /**
-   * @brief focusInEvent
-   * @param event
-   */
-  virtual void focusInEvent(QFocusEvent* event);
-
-  /**
-   * @brief focusOutEvent
-   * @param event
-   */
-  virtual void focusOutEvent(QFocusEvent* event);
 
   /**
    * @brief openHDF5File
@@ -144,23 +132,12 @@ signals:
   void parametersChanged();
 
 private slots:
-  #if READ_HDF5_EXTRA_FEATURES
-  void actionOpen_triggered();
-
-  void hdfTreeView_doubleClicked(const QModelIndex & index);
-#endif
-
   /**
    * @brief Slot to catch events when the DataRecord TreeView selection is changed
    * @param current The currently selected Index
    * @param previous The previously selected Index
    */
   void hdfTreeView_currentChanged ( const QModelIndex & current, const QModelIndex & previous );
-
-  /**
-   * @brief Qt Slot that fires in response to a click on a "Recent File' Menu entry.
-   */
-  void openRecentFile();
 
 private:
 
@@ -181,10 +158,6 @@ private:
   herr_t updateAttributeTable(const QString &datasetPath);
   herr_t updateGeneralTable(const QString &path);
   void addRow(QTableWidget* table, int row, const QString &key, const QString &value);
-
-  #if READ_HDF5_EXTRA_FEATURES
-  IH5DataWindow* findDataWindow(const QString &hdfPath);
-#endif
 
   ~ReadHDF5FileWidget();
   ReadHDF5FileWidget(const ReadHDF5FileWidget&);   //Copy Constructor Not Implemented

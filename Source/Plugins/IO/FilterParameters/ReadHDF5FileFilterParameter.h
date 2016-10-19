@@ -57,6 +57,18 @@ public:
 
   SIMPL_INSTANCE_PROPERTY(ReadHDF5File*, Filter)
 
+  /**
+   * @brief readJson Reads this filter parameter's corresponding property out of a QJsonObject.
+   * @param json The QJsonObject that the filter parameter reads from.
+   */
+  void readJson(const QJsonObject &json);
+
+  /**
+   * @brief writeJson Writes this filter parameter's corresponding property to a QJsonObject.
+   * @param json The QJsonObject that the filter parameter writes to.
+   */
+  void writeJson(QJsonObject &json);
+
 protected:
   ReadHDF5FileFilterParameter();
 

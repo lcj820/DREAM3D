@@ -75,3 +75,22 @@ QString ReadHDF5FileFilterParameter::getWidgetType()
 {
   return QString("ReadHDF5FileWidget");
 }
+
+// -----------------------------------------------------------------------------
+// THIS IS A SPECIAL CASE AND IS NOT STANDARD.  DO NOT COPY THIS CODE.
+// -----------------------------------------------------------------------------
+void ReadHDF5FileFilterParameter::readJson(const QJsonObject& json)
+{
+  if (json.contains("HDF5FilePath") && json["HDF5FilePath"].isString())
+  {
+    m_Filter->setHDF5FilePath(json["HDF5FilePath"].toString());
+  }
+}
+
+// -----------------------------------------------------------------------------
+// THIS IS A SPECIAL CASE AND IS NOT STANDARD.  DO NOT COPY THIS CODE.
+// -----------------------------------------------------------------------------
+void ReadHDF5FileFilterParameter::writeJson(QJsonObject& json)
+{
+  json["HDF5FilePath"] = m_Filter->getHDF5FilePath();
+}
