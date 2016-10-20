@@ -109,9 +109,9 @@ ReadHDF5FileWidget::ReadHDF5FileWidget(FilterParameter* parameter, AbstractFilte
 // -----------------------------------------------------------------------------
 ReadHDF5FileWidget::~ReadHDF5FileWidget()
 {
-  if (this->m_FileId > 0)
+  if (m_FileId > 0)
   {
-    H5Fclose(this->m_FileId);
+    H5Fclose(m_FileId);
   }
 }
 
@@ -225,7 +225,7 @@ void ReadHDF5FileWidget::dragEnterEvent(QDragEnterEvent* e)
   QList<QUrl> urls = dat->urls();
   QString file = urls.count() ? urls[0].toLocalFile() : QString();
   QDir parent(file);
-  this->m_OpenDialogLastDirectory = parent.dirName();
+  m_OpenDialogLastDirectory = parent.dirName();
   QFileInfo fi(file );
   QString ext = fi.suffix();
   if (fi.exists() && fi.isFile() && ( ext.compare("dream3d") || ext.compare("h5") || ext.compare("hdf5") ) )
@@ -247,14 +247,14 @@ void ReadHDF5FileWidget::dropEvent(QDropEvent* e)
   QList<QUrl> urls = dat->urls();
   QString file = urls.count() ? urls[0].toLocalFile() : QString();
   QDir parent(file);
-  this->m_OpenDialogLastDirectory = parent.dirName();
+  m_OpenDialogLastDirectory = parent.dirName();
   QFileInfo fi(file );
   QString ext = fi.suffix();
   file = QDir::toNativeSeparators(file);
   if (fi.exists() && fi.isFile() &&( ext.compare("h5") || ext.compare("hdf5") || ext.compare("dream3d")) )
   {
     QDir parent (file);
-    this->m_OpenDialogLastDirectory = parent.dirName();
+    m_OpenDialogLastDirectory = parent.dirName();
     openHDF5File(file);
     emit parametersChanged();
   }
@@ -286,7 +286,7 @@ void ReadHDF5FileWidget::initWithFile(QString hdf5File)
   hdf5File = QDir::toNativeSeparators(hdf5File);
 
   QFileInfo fileInfo(hdf5File);
-  this->m_OpenDialogLastDirectory = fileInfo.path();
+  m_OpenDialogLastDirectory = fileInfo.path();
   m_CurrentOpenFile = hdf5File;
 
   m_FileId = H5Utilities::openFile(hdf5File.toStdString(), true);
@@ -297,20 +297,20 @@ void ReadHDF5FileWidget::initWithFile(QString hdf5File)
   }
 
   // Set the Window Title to the file name
-  this->setWindowTitle(fileInfo.fileName());
+  setWindowTitle(fileInfo.fileName());
 
 
   //Get the ReadHDF5TreeModel and set the Root Node
-  ReadHDF5TreeModel* treeModel = new ReadHDF5TreeModel(this->m_FileId, this->hdfTreeView);
+  ReadHDF5TreeModel* treeModel = new ReadHDF5TreeModel(m_FileId, hdfTreeView);
   hdfTreeView->setModel(treeModel);
 #if defined( Q_WS_MAC )
-  this->hdfTreeView->setAttribute(Qt::WA_MacShowFocusRect, false);
+  hdfTreeView->setAttribute(Qt::WA_MacShowFocusRect, false);
 #endif
 
   //Connect the Tree View selection Model to a method in this class
   connect(hdfTreeView->selectionModel(), SIGNAL(currentChanged( QModelIndex, QModelIndex ) ), this, SLOT(hdfTreeView_currentChanged( QModelIndex, QModelIndex) ));
 
-  this->attributesTable->horizontalHeader()->setStretchLastSection(true); // Stretch the last column to fit to the viewport
+  attributesTable->horizontalHeader()->setStretchLastSection(true); // Stretch the last column to fit to the viewport
 
 }
 
@@ -330,7 +330,7 @@ void ReadHDF5FileWidget::_updateViewFromHDFPath(std::string dataPath)
 void ReadHDF5FileWidget::hdfTreeView_currentChanged(const QModelIndex & current, const QModelIndex & previous)
 {
   //Check to make sure we have a data file opened
-  if (this->m_FileId < 0)
+  if (m_FileId < 0)
   {
     std::cout << "\t No data file is opened" << std::endl;
     return;
@@ -510,18 +510,18 @@ herr_t ReadHDF5FileWidget::updateAttributeTable(const QString &path)
   QString objName = QH5Utilities::extractObjectName(path);
 
   herr_t err = 0;
-  if (this->m_FileId < 0)
+  if (m_FileId < 0)
   {
-    std::cout << "Error: FileId is Invalid: " << this->m_FileId << std::endl;
+    std::cout << "Error: FileId is Invalid: " << m_FileId << std::endl;
     return m_FileId;
   }
   // Test for Dataset Existance
   H5O_info_t statbuf;
-  err = H5Oget_info_by_name(this->m_FileId, path.toStdString().c_str(),  &statbuf, H5P_DEFAULT);
+  err = H5Oget_info_by_name(m_FileId, path.toStdString().c_str(),  &statbuf, H5P_DEFAULT);
   if (err < 0)
   {
     attributesTable->clearContents(); // Clear the attributes Table
-    std::cout << "Data Set Does NOT exist at Path given: FileId: " << this->m_FileId << std::endl;
+    std::cout << "Data Set Does NOT exist at Path given: FileId: " << m_FileId << std::endl;
     return err;
   }
 
@@ -549,7 +549,16 @@ herr_t ReadHDF5FileWidget::updateAttributeTable(const QString &path)
       {
         QString key = QString::fromStdString(*iter);
 
-        QString parentPath = QH5Utilities::getParentPath(path);
+        QString parentPath = "";
+        if (path == "/")
+        {
+          parentPath = path;
+        }
+        else
+        {
+          parentPath = QH5Utilities::getParentPath(path);
+        }
+
         hid_t parentLoc = QH5Utilities::openHDF5Object(m_FileId, parentPath);
 
         QVector<hsize_t> dims;

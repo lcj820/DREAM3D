@@ -64,6 +64,9 @@ public:
   bool isImage();
   bool isTable();
   bool isString();
+  Qt::CheckState getCheckState();
+
+  void setCheckState(Qt::CheckState checkState);
 
   int numAttributes();
   int numDimensions();
@@ -75,19 +78,20 @@ protected:
   void initializeChildCount();
 
 private:
-  QList<ReadHDF5TreeModelItem*> childItems;
-  int childItemsInitialized;
-  int _childCount;
-  QVariant itemData;
-  ReadHDF5TreeModelItem *parentItem;
-  hid_t _fileId;
-  int _num_attrs;
-  int _numDims;
-  bool _isGroup;
-  bool _isImage;
-  bool _isTable;
-  bool _isString;
-  std::string _dataType;
+  QList<ReadHDF5TreeModelItem*>               m_ChildItems;
+  int                                         m_ChildItemsInitialized = 0;
+  int                                         m_ChildCount = -1;
+  QVariant                                    m_ItemData;
+  ReadHDF5TreeModelItem*                      m_ParentItem;
+  hid_t                                       m_FileId;
+  int                                         m_NumAttrs = -1;
+  int                                         m_NumDims = -1;
+  bool                                        m_IsGroup = false;
+  bool                                        m_IsImage = false;
+  bool                                        m_IsTable = false;
+  bool                                        m_IsString = false;
+  std::string                                 m_DataType = "";
+  Qt::CheckState                              m_CheckState = Qt::Unchecked;
 };
 
 #endif /* _readhdf5treemodelitem_h_ */

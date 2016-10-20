@@ -53,25 +53,92 @@ public:
   ReadHDF5TreeModel(hid_t fileId, QObject *parent = 0);
   ~ReadHDF5TreeModel();
 
+  /**
+   * @brief data
+   * @param index
+   * @param role
+   * @return
+   */
   QVariant data(const QModelIndex &index, int role) const;
+
+  /**
+   * @brief QAbstractItemModel::setData
+   * @param index
+   * @param value
+   * @param role
+   * @return
+   */
+  bool setData(const QModelIndex &index, const QVariant &value, int role);
+
+  /**
+   * @brief flags
+   * @param index
+   * @return
+   */
   Qt::ItemFlags flags(const QModelIndex &index) const;
-  QVariant headerData(int section, Qt::Orientation orientation,
-                      int role = Qt::DisplayRole) const;
-  QModelIndex index(int row, int column,
-                    const QModelIndex &parent = QModelIndex()) const;
+
+  /**
+   * @brief headerData
+   * @param section
+   * @param orientation
+   * @param role
+   * @return
+   */
+  QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const;
+
+  /**
+   * @brief index
+   * @param row
+   * @param column
+   * @param parent
+   * @return
+   */
+  QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const;
+
+  /**
+   * @brief parent
+   * @param index
+   * @return
+   */
   QModelIndex parent(const QModelIndex &index) const;
+
+  /**
+   * @brief rowCount
+   * @param parent
+   * @return
+   */
   int rowCount(const QModelIndex &parent = QModelIndex()) const;
+
+  /**
+   * @brief columnCount
+   * @param parent
+   * @return
+   */
   int columnCount(const QModelIndex &parent = QModelIndex()) const;
 
+  /**
+   * @brief hdfPathForIndex
+   * @param index
+   * @return
+   */
   QString hdfPathForIndex(const QModelIndex &index);
 
+  /**
+   * @brief hasChildren
+   * @param parent
+   * @return
+   */
   bool hasChildren(const QModelIndex &parent) const;
-private:
-  void setupModelData();
 
-  ReadHDF5TreeModelItem *rootItem;
-  hid_t _fileId;
-  QFileIconProvider iconProvider;
+private:
+  ReadHDF5TreeModelItem*                    m_RootItem;
+  hid_t                                     m_FileId;
+  QFileIconProvider                         m_IconProvider;
+
+  /**
+   * @brief setupModelData
+   */
+  void setupModelData();
 };
 
 

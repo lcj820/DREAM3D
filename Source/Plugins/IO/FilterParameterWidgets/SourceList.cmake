@@ -54,16 +54,23 @@ foreach(FPW ${${PLUGIN_NAME}_PARAMETER_WIDGETS})
   file(APPEND  ${AllFilterParameterWidgetsHeaderFile} "#include \"${PLUGIN_NAME}/FilterParameterWidgets/${FPW}.h\"\n")
 endforeach()
 
-foreach(FPW ${${PLUGIN_NAME}_EXTRA_CLASSES})
-  set(${PLUGIN_NAME}_ParameterWidgets_MOC_HDRS
-    ${${PLUGIN_NAME}_ParameterWidgets_MOC_HDRS}
-    ${${PLUGIN_NAME}_SOURCE_DIR}/FilterParameterWidgets/${FPW}.h
-    )
-  set(${PLUGIN_NAME}_ParameterWidgets_SRCS
-    ${${PLUGIN_NAME}_ParameterWidgets_SRCS}
-    ${${PLUGIN_NAME}_SOURCE_DIR}/FilterParameterWidgets/${FPW}.cpp
-    )
-endforeach()
+# --------------------------------------------------------------------
+# Add all extra class files
+set(${PLUGIN_NAME}_ParameterWidgets_MOC_HDRS
+  ${${PLUGIN_NAME}_ParameterWidgets_MOC_HDRS}
+  ${${PLUGIN_NAME}_SOURCE_DIR}/FilterParameterWidgets/ReadHDF5TreeModel.h
+  )
+set(${PLUGIN_NAME}_ParameterWidgets_HDRS
+  ${${PLUGIN_NAME}_SOURCE_DIR}/FilterParameterWidgets/ReadHDF5TreeModelItem.h
+  )
+set(${PLUGIN_NAME}_ParameterWidgets_SRCS
+  ${${PLUGIN_NAME}_ParameterWidgets_SRCS}
+  ${${PLUGIN_NAME}_SOURCE_DIR}/FilterParameterWidgets/ReadHDF5TreeModel.cpp
+  ${${PLUGIN_NAME}_SOURCE_DIR}/FilterParameterWidgets/ReadHDF5TreeModelItem.cpp
+  )
+set(${PLUGIN_NAME}_ParameterWidgets_UIS
+  ${${PLUGIN_NAME}_ParameterWidgets_UIS}
+  )
 
 # --------------------------------------------------------------------
 # Close off the files with the proper C++
@@ -77,8 +84,12 @@ cmpReplaceFileIfDifferent(OLD_FILE_PATH  ${${PLUGIN_NAME}_BINARY_DIR}/FilterPara
 set(AllFilterParameterWidgetsHeaderFile ${${PLUGIN_NAME}_BINARY_DIR}/FilterParameterWidgets/FilterParameterWidgets.h)
 set(RegisterKnownFilterParameterWidgetsFile ${${PLUGIN_NAME}_BINARY_DIR}/FilterParameterWidgets/RegisterKnownFilterParameterWidgets.cpp)
 
+set(${PLUGIN_NAME}_ParameterWidgets_HDRS
+  ${${PLUGIN_NAME}_ParameterWidgets_HDRS}
+  ${${PLUGIN_NAME}_ParameterWidgets_MOC_HDRS}
+  )
 
-cmp_IDE_SOURCE_PROPERTIES( "FilterParameterWidgets" "${${PLUGIN_NAME}_ParameterWidgets_MOC_HDRS}" "${${PLUGIN_NAME}_ParameterWidgets_SRCS}" "0")
+cmp_IDE_SOURCE_PROPERTIES( "FilterParameterWidgets" "${${PLUGIN_NAME}_ParameterWidgets_HDRS}" "${${PLUGIN_NAME}_ParameterWidgets_SRCS}" "0")
 
 cmp_IDE_GENERATED_PROPERTIES("FilterParameterWidgets/UI_Files" "${${PLUGIN_NAME}_ParameterWidgets_UIS}" "")
 

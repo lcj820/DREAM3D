@@ -39,19 +39,11 @@
 
 #include "H5Support/H5Utilities.h"
 
-ReadHDF5TreeModelItem::ReadHDF5TreeModelItem(hid_t fileId, const QString &data, ReadHDF5TreeModelItem *parent)
+ReadHDF5TreeModelItem::ReadHDF5TreeModelItem(hid_t fileId, const QString &data, ReadHDF5TreeModelItem *parent) :
+  m_ItemData(QVariant(data)),
+  m_ParentItem(parent),
+  m_FileId(fileId)
 {
-  this->_fileId = fileId;
-  parentItem = parent;
-  itemData = QVariant(data);
-  childItemsInitialized = 0;
-  _childCount = -1;
-  this->_num_attrs = -1;
-  this->_numDims = -1;
-  this->_isGroup = false;
-  this->_isImage = false;
-  this->_isTable = false;
-  this->_isString = false;
 
 }
 
@@ -60,7 +52,7 @@ ReadHDF5TreeModelItem::ReadHDF5TreeModelItem(hid_t fileId, const QString &data, 
 // -----------------------------------------------------------------------------
 ReadHDF5TreeModelItem::~ReadHDF5TreeModelItem()
 {
-  qDeleteAll(childItems);
+  qDeleteAll(m_ChildItems);
 }
 
 // -----------------------------------------------------------------------------
@@ -68,7 +60,7 @@ ReadHDF5TreeModelItem::~ReadHDF5TreeModelItem()
 // -----------------------------------------------------------------------------
 void ReadHDF5TreeModelItem::appendChild(ReadHDF5TreeModelItem *item)
 {
-  childItems.append(item);
+  m_ChildItems.append(item);
 }
 
 // -----------------------------------------------------------------------------
@@ -76,11 +68,11 @@ void ReadHDF5TreeModelItem::appendChild(ReadHDF5TreeModelItem *item)
 // -----------------------------------------------------------------------------
 ReadHDF5TreeModelItem *ReadHDF5TreeModelItem::child(int row)
 {
-  if (childItemsInitialized == 0)
+  if (m_ChildItemsInitialized == 0)
   {
     initializeChildItems();
   }
-  return childItems.value(row);
+  return m_ChildItems.value(row);
 }
 
 // -----------------------------------------------------------------------------
@@ -88,11 +80,11 @@ ReadHDF5TreeModelItem *ReadHDF5TreeModelItem::child(int row)
 // -----------------------------------------------------------------------------
 int ReadHDF5TreeModelItem::childCount()
 {
-  if (_childCount < 0)
+  if (m_ChildCount < 0)
   {
-    this->initializeChildCount();
+    initializeChildCount();
   }
-  return this->_childCount;
+  return m_ChildCount;
 }
 
 // -----------------------------------------------------------------------------
@@ -108,7 +100,7 @@ int ReadHDF5TreeModelItem::columnCount()
 // -----------------------------------------------------------------------------
 QVariant ReadHDF5TreeModelItem::data(int column)
 {
-  return itemData;
+  return m_ItemData;
 }
 
 // -----------------------------------------------------------------------------
@@ -116,7 +108,7 @@ QVariant ReadHDF5TreeModelItem::data(int column)
 // -----------------------------------------------------------------------------
 ReadHDF5TreeModelItem *ReadHDF5TreeModelItem::parent()
 {
-  return parentItem;
+  return m_ParentItem;
 }
 
 // -----------------------------------------------------------------------------
@@ -124,8 +116,8 @@ ReadHDF5TreeModelItem *ReadHDF5TreeModelItem::parent()
 // -----------------------------------------------------------------------------
 int ReadHDF5TreeModelItem::row()
 {
-  if (parentItem)
-    return parentItem->childItems.indexOf(const_cast<ReadHDF5TreeModelItem*>(this));
+  if (m_ParentItem)
+    return m_ParentItem->m_ChildItems.indexOf(const_cast<ReadHDF5TreeModelItem*>(this));
 
   return 0;
 }
@@ -135,11 +127,27 @@ int ReadHDF5TreeModelItem::row()
 // -----------------------------------------------------------------------------
 bool ReadHDF5TreeModelItem::isGroup()
 {
-  if (this->_childCount < 0)
+  if (m_ChildCount < 0)
   {
-    this->initializeChildCount();
+    initializeChildCount();
   }
-  return this->_isGroup;
+  return m_IsGroup;
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+Qt::CheckState ReadHDF5TreeModelItem::getCheckState()
+{
+  return m_CheckState;
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void ReadHDF5TreeModelItem::setCheckState(Qt::CheckState checkState)
+{
+  m_CheckState = checkState;
 }
 
 // -----------------------------------------------------------------------------
@@ -147,34 +155,34 @@ bool ReadHDF5TreeModelItem::isGroup()
 // -----------------------------------------------------------------------------
 int ReadHDF5TreeModelItem::numAttributes()
 {
-  if (this->_num_attrs < 0)
+  if (m_NumAttrs < 0)
   {
-    this->initializeChildCount();
+    initializeChildCount();
   }
-  return this->_num_attrs;
+  return m_NumAttrs;
 }
 
 int ReadHDF5TreeModelItem::numDimensions()
 {
-  return this->_numDims;
+  return m_NumDims;
 }
 
 bool ReadHDF5TreeModelItem::isImage()
 {
-  if (childItemsInitialized == 0)
+  if (m_ChildItemsInitialized == 0)
   {
     initializeChildItems();
   }
-  return this->_isImage;
+  return m_IsImage;
 }
 
 bool ReadHDF5TreeModelItem::isString()
 {
-  if (childItemsInitialized == 0)
+  if (m_ChildItemsInitialized == 0)
   {
     initializeChildItems();
   }
-  return this->_isString;
+  return m_IsString;
 }
 
 // -----------------------------------------------------------------------------
@@ -184,7 +192,7 @@ QIcon ReadHDF5TreeModelItem::icon()
 {
   QString iconName = "";
 
-  if (this->isGroup() == true)
+  if (isGroup() == true)
   {
     iconName = ":/folder_blue.png";
   }
@@ -201,42 +209,42 @@ QIcon ReadHDF5TreeModelItem::icon()
 // -----------------------------------------------------------------------------
 void ReadHDF5TreeModelItem::initializeChildCount()
 {
-  if (this->_fileId < 0)
+  if (m_FileId < 0)
   {
     return;
   }
   // std::cout << "ReadHDF5TreeModelItem::initializeChildCount()" << std::endl;
   herr_t err = 0;
   // Build up an HDF path to the current group
-  ReadHDF5TreeModelItem* currentParent = this->parentItem;
+  ReadHDF5TreeModelItem* currentParent = m_ParentItem;
   if (NULL == currentParent)
   {
     QString name( "/");  // Add the "HDF5 Root Directory"
-    ReadHDF5TreeModelItem* item = new ReadHDF5TreeModelItem(this->_fileId,
+    ReadHDF5TreeModelItem* item = new ReadHDF5TreeModelItem(m_FileId,
                                                             name,
                                                             const_cast<ReadHDF5TreeModelItem*>(this));
-    childItems.append(item);
-    _childCount = 1;
-    this->_num_attrs = 0;
-    this->_numDims = 0;
-    this->_isGroup = true;
+    m_ChildItems.append(item);
+    m_ChildCount = 1;
+    m_NumAttrs = 0;
+    m_NumDims = 0;
+    m_IsGroup = true;
     return;
   }
 
   QString path = generateHDFPath();
 
-  hid_t obj_id = H5Utilities::openHDF5Object(this->_fileId, path.toStdString());
+  hid_t obj_id = H5Utilities::openHDF5Object(m_FileId, path.toStdString());
   if (obj_id > 0) {
     H5O_info_t object_info;
     err = H5Oget_info(obj_id, &object_info);
-    this->_num_attrs = object_info.num_attrs;
+    m_NumAttrs = object_info.num_attrs;
   }
   H5Utilities::closeHDF5Object(obj_id);
 
-  if (H5Utilities::isGroup(this->_fileId, path.toStdString()) )
+  if (H5Utilities::isGroup(m_FileId, path.toStdString()) )
   {
-    this->_isGroup = true;
-    hid_t groupId = H5Gopen(this->_fileId, path.toStdString().c_str(), H5P_DEFAULT);
+    m_IsGroup = true;
+    hid_t groupId = H5Gopen(m_FileId, path.toStdString().c_str(), H5P_DEFAULT);
     if (groupId < 0)
     {
       std::cout << "Could not open Group '" << path.toStdString() << "'" <<__FILE__ << ":" << __LINE__ <<  std::endl;
@@ -245,13 +253,13 @@ void ReadHDF5TreeModelItem::initializeChildCount()
 
     H5G_info_t group_info;
     err = H5Gget_info(groupId, &group_info);
-    this->_childCount = group_info.nlinks;
+    m_ChildCount = group_info.nlinks;
 
     err = H5Gclose(groupId);
   }
   else
   {
-    this->_childCount = 0;
+    m_ChildCount = 0;
   }
 }
 
@@ -261,22 +269,22 @@ void ReadHDF5TreeModelItem::initializeChildCount()
 // -----------------------------------------------------------------------------
 void ReadHDF5TreeModelItem::initializeChildItems()
 {
-  if (this->_fileId < 0)
+  if (m_FileId < 0)
   {
     return;
   }
   //std::cout << "ReadHDF5TreeModelItem::initializeChildItems()" << std::endl;
   herr_t err = 0;
   // Build up an HDF path to the current group
-  ReadHDF5TreeModelItem* currentParent = this->parentItem;
+  ReadHDF5TreeModelItem* currentParent = m_ParentItem;
   if (NULL == currentParent)
   {
     QString name( "/");  // Add the "HDF5 Root Directory"
-    ReadHDF5TreeModelItem* item = new ReadHDF5TreeModelItem(this->_fileId,
+    ReadHDF5TreeModelItem* item = new ReadHDF5TreeModelItem(m_FileId,
                                                             name,
                                                             const_cast<ReadHDF5TreeModelItem*>(this));
-    childItems.append(item);
-    childItemsInitialized = 1;
+    m_ChildItems.append(item);
+    m_ChildItemsInitialized = 1;
     return;
   }
 
@@ -284,10 +292,10 @@ void ReadHDF5TreeModelItem::initializeChildItems()
 
   //std::cout << "ReadHDF5TreeModelItem::initializeChildItems() - Generated Path as: " << path.toStdString() << std::endl;
   // Check to see if the path is a group or data set
-  if (H5Utilities::isGroup(this->_fileId, path.toStdString()) )
+  if (H5Utilities::isGroup(m_FileId, path.toStdString()) )
   {
-    this->_isGroup = true;
-    hid_t groupId = H5Gopen(this->_fileId, path.toStdString().c_str(), H5P_DEFAULT);
+    m_IsGroup = true;
+    hid_t groupId = H5Gopen(m_FileId, path.toStdString().c_str(), H5P_DEFAULT);
     if (groupId < 0)
     {
       std::cout << "Could not open Group '" << path.toStdString() << "'" <<__FILE__ << ":" << __LINE__ <<  std::endl;
@@ -296,7 +304,7 @@ void ReadHDF5TreeModelItem::initializeChildItems()
 
     H5O_info_t object_info;
     err = H5Oget_info(groupId, &object_info);
-    this->_num_attrs = object_info.num_attrs;
+    m_NumAttrs = object_info.num_attrs;
 
     std::list<std::string> itemList;
     herr_t err = H5Utilities::getGroupObjects(groupId, H5Utilities::H5Support_ANY, itemList);
@@ -311,48 +319,48 @@ void ReadHDF5TreeModelItem::initializeChildItems()
     {
       // std::cout << "Adding Child with name '" << *iter << "'" << std::endl;
       QString name( (*iter).c_str() );
-      ReadHDF5TreeModelItem* item = new ReadHDF5TreeModelItem(this->_fileId,
+      ReadHDF5TreeModelItem* item = new ReadHDF5TreeModelItem(m_FileId,
                                                               name,
                                                               const_cast<ReadHDF5TreeModelItem*>(this));
-      childItems.append(item);
+      m_ChildItems.append(item);
     }
-    this->_childCount = itemList.size();
+    m_ChildCount = itemList.size();
     err = H5Gclose(groupId);
   }
   else  // Get some basic information about the data set
   {
     //std::cout << "TreeModelItem is a DataSet" << std::endl;
-    hid_t obj_id = H5Utilities::openHDF5Object(this->_fileId, path.toStdString());
+    hid_t obj_id = H5Utilities::openHDF5Object(m_FileId, path.toStdString());
     if (obj_id > 0) {
       H5O_info_t object_info;
       err = H5Oget_info(obj_id, &object_info);
-      this->_num_attrs = object_info.num_attrs;
+      m_NumAttrs = object_info.num_attrs;
     }
-    if (_num_attrs > 0)
+    if (m_NumAttrs > 0)
     {
       // Test for Image Class attribute
       std::string data;
-      err = H5Lite::readStringAttribute(this->_fileId, path.toStdString(), "CLASS", data);
+      err = H5Lite::readStringAttribute(m_FileId, path.toStdString(), "CLASS", data);
       if (err >= 0)
       {
-        this->_isImage = true;
+        m_IsImage = true;
       }
     }
 
     std::vector<hsize_t> dims;
     H5T_class_t data_type;
     size_t type_size;
-    err = H5Lite::getDatasetInfo(this->_fileId, path.toStdString(), dims, data_type, type_size);
-    this->_numDims = dims.size();
+    err = H5Lite::getDatasetInfo(m_FileId, path.toStdString(), dims, data_type, type_size);
+    m_NumDims = dims.size();
 
     switch (data_type)
     {
     case H5T_STRING:
-      this->_isString = true;
-      this->_dataType = "H5T_STRING";
+      m_IsString = true;
+      m_DataType = "H5T_STRING";
       break;
     default:
-      this->_dataType = "OTHER";
+      m_DataType = "OTHER";
     }
 
     err = H5Utilities::closeHDF5Object(obj_id);
@@ -361,7 +369,7 @@ void ReadHDF5TreeModelItem::initializeChildItems()
       //TODO: Catch this error
     }
   }
-  childItemsInitialized = 1;
+  m_ChildItemsInitialized = 1;
 }
 
 // -----------------------------------------------------------------------------
@@ -369,16 +377,16 @@ void ReadHDF5TreeModelItem::initializeChildItems()
 // -----------------------------------------------------------------------------
 QString ReadHDF5TreeModelItem::generateHDFPath()
 {
-  if (this->_fileId < 0)
+  if (m_FileId < 0)
   {
     return QString();
   }
 
   // Build up an HDF path to the current group
-  ReadHDF5TreeModelItem* currentParent = this->parentItem;
-  QString path = itemData.toString();
+  ReadHDF5TreeModelItem* currentParent = m_ParentItem;
+  QString path = m_ItemData.toString();
   //std::cout << "Current Item Data: " << path.toStdString() << std::endl;
-  if (currentParent != NULL && currentParent->itemData.toString().compare("HEADER") == 0)
+  if (currentParent != NULL && currentParent->m_ItemData.toString().compare("HEADER") == 0)
   {
     // std::cout << "path=" << path.toStdString() << std::endl;
     currentParent = NULL; // We are at the top
