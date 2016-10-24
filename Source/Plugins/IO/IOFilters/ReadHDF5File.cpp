@@ -81,6 +81,14 @@ void ReadHDF5File::dataCheck()
     notifyErrorMessage(getHumanLabel(), ss, getErrorCondition());
     return;
   }
+
+  if (m_SelectedHDF5Paths.size() <= 0)
+  {
+    QString ss = tr("No datasets are selected. At least one dataset must be selected.");
+    setErrorCondition(-20003);
+    notifyErrorMessage(getHumanLabel(), ss, getErrorCondition());
+    return;
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -106,15 +114,23 @@ void ReadHDF5File::execute()
   dataCheck();
   if(getErrorCondition() < 0) { return; }
 
-//  if (getCancel() == true) { return; }
+  hid_t fileId = H5Utilities::openFile(m_HDF5FilePath.toStdString(), true);
+  if (fileId < 0)
+  {
+    std::cout << "Error Reading HDF5 file: " << m_HDF5FilePath.toStdString() << std::endl;
+    return;
+  }
 
-//  if (getErrorCondition() < 0)
-//  {
-//    QString ss = QObject::tr("Some error message");
-//    setErrorCondition(-99999999);
-//    notifyErrorMessage(getHumanLabel(), ss, getErrorCondition());
-//    return;
-//  }
+  for (int i=0; i<m_SelectedHDF5Paths.size(); i++)
+  {
+    QString parentPath = QH5Utilities::getParentPath(m_SelectedHDF5Paths[i]);
+
+    hid_t parentId = QH5Utilities::openHDF5Object(fileId, parentPath);
+
+    // Read dataset into DREAM.3D structure
+
+    QH5Utilities::closeFile(parentId);
+  }
 
   notifyStatusMessage(getHumanLabel(), "Complete");
 }

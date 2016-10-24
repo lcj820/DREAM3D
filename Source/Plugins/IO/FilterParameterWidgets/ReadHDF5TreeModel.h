@@ -130,10 +130,20 @@ public:
    */
   bool hasChildren(const QModelIndex &parent) const;
 
+  /**
+   * @brief getSelectedHDF5Paths
+   * @return
+   */
+  QList<QString> getSelectedHDF5Paths();
+
+signals:
+  void modelChanged();
+
 private:
   ReadHDF5TreeModelItem*                    m_RootItem;
   hid_t                                     m_FileId;
   QFileIconProvider                         m_IconProvider;
+  QList<QString>                            m_SelectedHDF5Paths;
 
   /**
    * @brief setupModelData

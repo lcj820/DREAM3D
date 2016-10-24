@@ -88,9 +88,9 @@ QVariant ReadHDF5TreeModel::data(const QModelIndex &index, int role) const
   {
     return item->data(index.column());
   }
-  else if (role == Qt::CheckStateRole && index.column() == 0)
+  else if (role == Qt::CheckStateRole && index.column() == 0 && item->isGroup() == false)
   {
-    return item->getCheckState() ? Qt::Checked : Qt::Unchecked;
+    return item->getCheckState();
   }
 
   return QVariant();
@@ -112,6 +112,17 @@ bool ReadHDF5TreeModel::setData(const QModelIndex &index, const QVariant &value,
   {
     Qt::CheckState checkState = static_cast<Qt::CheckState>(value.toInt());
     item->setCheckState(checkState);
+    QString hdf5Path = item->generateHDFPath();
+    if (checkState == Qt::Checked)
+    {
+      m_SelectedHDF5Paths.push_back(hdf5Path);
+    }
+    else if (checkState == Qt::Unchecked)
+    {
+      m_SelectedHDF5Paths.removeAll(hdf5Path);
+    }
+
+    emit modelChanged();
   }
 
   return true;
@@ -267,6 +278,14 @@ QString ReadHDF5TreeModel::hdfPathForIndex(const QModelIndex &index)
 {
   ReadHDF5TreeModelItem* item = static_cast<ReadHDF5TreeModelItem*>(index.internalPointer());
   return item->generateHDFPath();
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+QList<QString> ReadHDF5TreeModel::getSelectedHDF5Paths()
+{
+  return m_SelectedHDF5Paths;
 }
 
 

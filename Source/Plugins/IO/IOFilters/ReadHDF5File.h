@@ -24,6 +24,7 @@ class ReadHDF5File : public AbstractFilter
     virtual ~ReadHDF5File();
 
     SIMPL_INSTANCE_PROPERTY(QString, HDF5FilePath)
+    SIMPL_INSTANCE_PROPERTY(QList<QString>, SelectedHDF5Paths)
 
     /**
      * @brief getCompiledLibraryName Reimplemented from @see AbstractFilter class

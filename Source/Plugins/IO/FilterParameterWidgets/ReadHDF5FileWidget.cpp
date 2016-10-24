@@ -146,6 +146,7 @@ void ReadHDF5FileWidget::setupGui()
 #endif
 
   value->setFont(inputFileFont);
+  value->hide();
 
   if (m_Filter != nullptr)
   {
@@ -153,6 +154,7 @@ void ReadHDF5FileWidget::setupGui()
     if (hdf5FilePath.isEmpty() == false)
     {
       value->setText(hdf5FilePath);
+      value->show();
       initWithFile(hdf5FilePath);
     }
   }
@@ -302,6 +304,7 @@ void ReadHDF5FileWidget::initWithFile(QString hdf5File)
 
   //Get the ReadHDF5TreeModel and set the Root Node
   ReadHDF5TreeModel* treeModel = new ReadHDF5TreeModel(m_FileId, hdfTreeView);
+  connect(treeModel, SIGNAL(modelChanged()), this, SIGNAL(parametersChanged()));
   hdfTreeView->setModel(treeModel);
 #if defined( Q_WS_MAC )
   hdfTreeView->setAttribute(Qt::WA_MacShowFocusRect, false);
@@ -609,6 +612,12 @@ void ReadHDF5FileWidget::filterNeedsInputParameters(AbstractFilter* filter)
   Q_UNUSED(filter)
 
   m_Filter->setHDF5FilePath(value->text());
+
+  ReadHDF5TreeModel* treeModel = dynamic_cast<ReadHDF5TreeModel*>(hdfTreeView->model());
+  if (treeModel != nullptr)
+  {
+    m_Filter->setSelectedHDF5Paths(treeModel->getSelectedHDF5Paths());
+  }
 }
 
 // -----------------------------------------------------------------------------
