@@ -26,6 +26,9 @@ class ReadHDF5File : public AbstractFilter
     SIMPL_INSTANCE_PROPERTY(QString, HDF5FilePath)
     SIMPL_INSTANCE_PROPERTY(QList<QString>, SelectedHDF5Paths)
 
+    SIMPL_INSTANCE_PROPERTY(DataArrayPath, SelectedAttributeMatrix)
+    Q_PROPERTY(DataArrayPath SelectedAttributeMatrix READ getSelectedAttributeMatrix WRITE setSelectedAttributeMatrix)
+
     /**
      * @brief getCompiledLibraryName Reimplemented from @see AbstractFilter class
      */

@@ -7,6 +7,7 @@
 #include <QtCore/QFileInfo>
 
 #include "SIMPLib/Common/Constants.h"
+#include "SIMPLib/FilterParameters/AttributeMatrixSelectionFilterParameter.h"
 
 #include "IO/IOConstants.h"
 #include "IO/IOVersion.h"
@@ -54,6 +55,11 @@ void ReadHDF5File::setupFilterParameters()
   parameter->setFilter(this);
   parameters.push_back(parameter);
 
+  {
+    AttributeMatrixSelectionFilterParameter::RequirementType req;
+    parameters.push_back(SIMPL_NEW_AM_SELECTION_FP("Attribute Matrix", SelectedAttributeMatrix, FilterParameter::RequiredArray, ReadHDF5File, req));
+  }
+
   setFilterParameters(parameters);
 }
 
@@ -89,6 +95,53 @@ void ReadHDF5File::dataCheck()
     notifyErrorMessage(getHumanLabel(), ss, getErrorCondition());
     return;
   }
+
+  int err = 0;
+  AttributeMatrix::Pointer am = getDataContainerArray()->getPrereqAttributeMatrixFromPath<AbstractFilter>(this, m_SelectedAttributeMatrix, err);
+  if (getErrorCondition() < 0) { return; }
+
+  hid_t fileId = H5Utilities::openFile(m_HDF5FilePath.toStdString(), true);
+  if (fileId < 0)
+  {
+    std::cout << "Error Reading HDF5 file: " << m_HDF5FilePath.toStdString() << std::endl;
+    return;
+  }
+
+  for (int i=0; i<m_SelectedHDF5Paths.size(); i++)
+  {
+    QString parentPath = QH5Utilities::getParentPath(m_SelectedHDF5Paths[i]);
+
+    hid_t parentId = QH5Utilities::openHDF5Object(fileId, parentPath);
+
+    // Read dataset into DREAM.3D structure
+    QString objectName = QH5Utilities::getObjectNameFromPath(m_SelectedHDF5Paths[i]);
+
+    QVector<hsize_t> dims;
+    H5T_class_t type_class;
+    size_t type_size;
+    herr_t err = QH5Lite::getDatasetInfo(parentId, objectName, dims, type_class, type_size);
+    if (err < 0)
+    {
+      QString ss = tr("Error reading type info from dataset with path '%1'").arg(m_SelectedHDF5Paths[i]);
+      setErrorCondition(-20004);
+      notifyErrorMessage(getHumanLabel(), ss, getErrorCondition());
+      return;
+    }
+
+    IDataArray::Pointer dPtr = H5DataArrayReader::ReadIDataArray(parentId, objectName, getInPreflight());
+
+    if (dPtr->getNumberOfTuples() != am->getNumberOfTuples())
+    {
+      QString ss = tr("The number of tuples of dataset with path '%1' does not equal the number of tuples of the selected attribute matrix '%2'").arg(m_SelectedHDF5Paths[i]).arg(m_SelectedAttributeMatrix.getAttributeMatrixName());
+      setErrorCondition(-20004);
+      notifyErrorMessage(getHumanLabel(), ss, getErrorCondition());
+      return;
+    }
+
+    am->addAttributeArray(dPtr->getName(), dPtr);
+
+    QH5Utilities::closeFile(parentId);
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -113,24 +166,6 @@ void ReadHDF5File::execute()
   initialize();
   dataCheck();
   if(getErrorCondition() < 0) { return; }
-
-  hid_t fileId = H5Utilities::openFile(m_HDF5FilePath.toStdString(), true);
-  if (fileId < 0)
-  {
-    std::cout << "Error Reading HDF5 file: " << m_HDF5FilePath.toStdString() << std::endl;
-    return;
-  }
-
-  for (int i=0; i<m_SelectedHDF5Paths.size(); i++)
-  {
-    QString parentPath = QH5Utilities::getParentPath(m_SelectedHDF5Paths[i]);
-
-    hid_t parentId = QH5Utilities::openHDF5Object(fileId, parentPath);
-
-    // Read dataset into DREAM.3D structure
-
-    QH5Utilities::closeFile(parentId);
-  }
 
   notifyStatusMessage(getHumanLabel(), "Complete");
 }
