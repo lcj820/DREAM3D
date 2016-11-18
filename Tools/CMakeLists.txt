@@ -138,6 +138,19 @@ COMPILE_TOOL(
     LINK_LIBRARIES EbsdLib SIMPLib
 )
 
+# Create a Command line tool for the MATLAB_CodeGen
+COMPILE_TOOL(
+    TARGET GradientTest
+    SOURCES ${DREAM3DTools_SOURCE_DIR}/GradientTest.cpp
+    DEBUG_EXTENSION ${EXE_DEBUG_EXTENSION}
+    VERSION_MAJOR ${DREAM3D_VER_MAJOR}
+    VERSION_MINOR ${DREAM3D_VER_MINOR}
+    VERSION_PATCH ${DREAM3D_VER_PATCH}
+    BINARY_DIR    ${${PROJECT_NAME}_BINARY_DIR}
+    COMPONENT     Tools
+    LINK_LIBRARIES SIMPLib
+)
+
 # --------------------------------------------------------------------
 # Setup an option to compile the version JSON file. This should be off
 # by default as no one needs it except the web admin
